@@ -9,6 +9,7 @@ import {
   isAllowedImportFile,
   parseImportFile,
   stripKnownExtension,
+  stripLeadingTitleHeading,
 } from "@/features/imports/parse";
 
 describe("isAllowedImportFile", () => {
@@ -88,5 +89,30 @@ describe("parseImportFile", () => {
     const result = parseImportFile("메모.txt", raw);
     expect(result.title).toBe("메모");
     expect(result.content).toBe(raw);
+  });
+
+  it("drops a leading heading that just repeats the title", () => {
+    const result = parseImportFile(
+      "모바일 앱 심사 제출 절차.md",
+      "# 모바일 앱 심사 제출 절차\n\n## iOS\n\n내용",
+    );
+    expect(result.title).toBe("모바일 앱 심사 제출 절차");
+    expect(result.content).toBe("## iOS\n\n내용");
+  });
+});
+
+describe("stripLeadingTitleHeading", () => {
+  it("removes a matching leading H1 and one following blank line", () => {
+    expect(stripLeadingTitleHeading("# 제목\n\n본문", "제목")).toBe("본문");
+  });
+
+  it("leaves the content untouched when the heading text differs", () => {
+    const content = "# 다른 제목\n\n본문";
+    expect(stripLeadingTitleHeading(content, "제목")).toBe(content);
+  });
+
+  it("leaves the content untouched when there is no leading heading", () => {
+    const content = "그냥 본문\n\n# 제목";
+    expect(stripLeadingTitleHeading(content, "제목")).toBe(content);
   });
 });

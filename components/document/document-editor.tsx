@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, Image as ImageIcon, Save } from "lucide-react";
+import { Eye, FileText, Image as ImageIcon, Save } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import {
@@ -15,6 +15,7 @@ import {
 import { createDraftDocumentAction } from "@/app/(wiki)/documents/actions";
 import { MarkdownRenderer } from "@/components/document/markdown-renderer";
 import type { DocumentActionState } from "@/features/documents/action-state";
+import { isAllowedImportFile, parseImportFile } from "@/features/imports/parse";
 
 type EditorDocument = {
   title: string;
@@ -59,6 +60,7 @@ export function DocumentEditor({
   const savedSnapshot = useRef("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textFileInputRef = useRef<HTMLInputElement>(null);
   const [state, formAction, pending] = useActionState(action, initialState);
   const currentVersion = state.savedVersion ?? document.version;
   const effectiveDocumentId = documentId ?? draftDocumentId ?? undefined;
@@ -176,6 +178,24 @@ export function DocumentEditor({
     void uploadFiles(images);
   };
 
+  const loadTextFile = useCallback(
+    async (file: File) => {
+      if (!isAllowedImportFile(file.name)) {
+        setUploadStatus("지원하지 않는 파일 형식입니다(.md, .markdown, .txt만 가능).");
+        return;
+      }
+      const raw = await file.text();
+      const { title, content } = parseImportFile(file.name, raw);
+      setDocument((current) => ({
+        ...current,
+        title: current.title.trim() ? current.title : title,
+      }));
+      insertAtCursor(`${content}\n`);
+      setUploadStatus(null);
+    },
+    [insertAtCursor],
+  );
+
   return (
     <form action={formAction} className="document-editor">
       <input name="version" type="hidden" value={currentVersion} />
@@ -206,6 +226,25 @@ export function DocumentEditor({
         >
           <ImageIcon size={16} aria-hidden="true" />
           이미지
+        </button>
+        <input
+          ref={textFileInputRef}
+          accept=".md,.markdown,.txt"
+          className="visually-hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (file) void loadTextFile(file);
+          }}
+          type="file"
+        />
+        <button
+          className="secondary-button"
+          onClick={() => textFileInputRef.current?.click()}
+          type="button"
+        >
+          <FileText size={16} aria-hidden="true" />
+          파일 불러오기
         </button>
         <button className="primary-button" disabled={pending} type="submit">
           <Save size={16} aria-hidden="true" />
