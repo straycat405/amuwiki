@@ -3,8 +3,13 @@ import { FileText, Plus } from "lucide-react";
 import { AppHeader } from "@/components/shell/app-header";
 import { SiteFooter } from "@/components/shell/site-footer";
 import { WikiSidebar } from "@/components/shell/wiki-sidebar";
+import { requireOwner } from "@/lib/auth/require-owner";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  await requireOwner();
+
   return (
     <div className="app-shell">
       <AppHeader />

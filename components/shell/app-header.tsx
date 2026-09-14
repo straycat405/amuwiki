@@ -1,5 +1,7 @@
-import { Plus, Search, Settings } from "lucide-react";
+import { LogOut, Plus, Search, Settings } from "lucide-react";
 import Link from "next/link";
+
+import { signOut } from "@/app/actions/auth";
 
 export function AppHeader() {
   return (
@@ -23,6 +25,11 @@ export function AppHeader() {
         <button className="icon-button" type="button" aria-label="설정">
           <Settings size={19} aria-hidden="true" />
         </button>
+        <form action={signOut}>
+          <button className="icon-button" type="submit" aria-label="로그아웃">
+            <LogOut size={19} aria-hidden="true" />
+          </button>
+        </form>
       </div>
     </header>
   );
