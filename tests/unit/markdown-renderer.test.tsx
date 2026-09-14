@@ -26,6 +26,13 @@ describe("MarkdownRenderer", () => {
     expect(screen.getByText("[[코드 예시]]")).toBeInTheDocument();
   });
 
+  it("renders a single editor newline as a visible line break", () => {
+    const { container } = render(<MarkdownRenderer markdown={"첫 줄\n둘째 줄"} />);
+
+    expect(container.querySelector("br")).toBeInTheDocument();
+    expect(container).toHaveTextContent("첫 줄 둘째 줄");
+  });
+
   it("does not render raw HTML", () => {
     const { container } = render(
       <MarkdownRenderer markdown={'<script>alert("xss")</script>안전'} />,

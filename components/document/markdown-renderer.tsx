@@ -6,6 +6,7 @@ import {
   remarkWikiLinks,
   type WikiLinkResolutions,
 } from "@/lib/markdown/wiki-links";
+import { remarkLineBreaks } from "@/lib/markdown/line-breaks";
 
 type MarkdownRendererProps = {
   markdown: string;
@@ -35,7 +36,11 @@ export function MarkdownRenderer({
     <div className="markdown-body">
       <ReactMarkdown
         components={{ a: SafeLink }}
-        remarkPlugins={[remarkGfm, [remarkWikiLinks, wikiLinkResolutions]]}
+        remarkPlugins={[
+          remarkGfm,
+          [remarkWikiLinks, wikiLinkResolutions],
+          remarkLineBreaks,
+        ]}
         urlTransform={defaultUrlTransform}
       >
         {markdown}
