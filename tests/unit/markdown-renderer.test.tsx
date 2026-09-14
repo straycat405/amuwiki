@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { MarkdownRenderer } from "@/components/document/markdown-renderer";
@@ -49,6 +49,19 @@ describe("MarkdownRenderer", () => {
       "rel",
       "noopener noreferrer",
     );
+  });
+
+  it("opens and closes a lightbox when an image is clicked", () => {
+    render(<MarkdownRenderer markdown="![고양이](/api/attachments/abc)" />);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByAltText("고양이"));
+
+    const dialog = screen.getByRole("dialog", { name: "이미지 확대 보기" });
+    expect(dialog).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("marks unresolved links when resolutions are available", () => {

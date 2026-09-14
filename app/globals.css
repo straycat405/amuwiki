@@ -77,6 +77,14 @@ button {
     var(--sidebar-width) minmax(0, 1fr);
 }
 
+.app-shell[data-sidebar="collapsed"] {
+  grid-template-columns: 0 minmax(0, 1fr);
+}
+
+.app-shell[data-sidebar="collapsed"] .wiki-sidebar {
+  display: none;
+}
+
 .app-header {
   position: sticky;
   top: 0;
@@ -89,6 +97,13 @@ button {
   background: color-mix(in srgb, var(--color-bg) 88%, transparent);
   padding: 0 var(--space-6);
   backdrop-filter: blur(18px);
+}
+
+.header-leading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
 .brand {
@@ -1028,6 +1043,42 @@ button {
   height: auto;
   border-radius: var(--radius-md);
   margin: var(--space-4) 0;
+  cursor: zoom-in;
+}
+
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  background: rgb(10 12 11 / 82%);
+  padding: var(--space-6);
+  cursor: zoom-out;
+}
+
+.image-lightbox img {
+  max-width: min(92vw, 1400px);
+  max-height: 90vh;
+  border-radius: var(--radius-md);
+  cursor: default;
+  box-shadow: var(--shadow-card);
+}
+
+.image-lightbox__close {
+  position: fixed;
+  top: var(--space-5);
+  right: var(--space-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, black 55%, transparent);
+  color: white;
+  cursor: pointer;
 }
 
 .markdown-body .concept-link {
@@ -1227,6 +1278,7 @@ button {
   .brand span:last-child,
   .search-button span,
   .search-button kbd,
+  .sidebar-toggle,
   .wiki-sidebar {
     display: none;
   }

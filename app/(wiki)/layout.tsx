@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { AppHeader } from "@/components/shell/app-header";
+import { SidebarProvider } from "@/components/shell/sidebar-provider";
 import { SiteFooter } from "@/components/shell/site-footer";
 import { WikiSidebar } from "@/components/shell/wiki-sidebar";
 import { PreferencesProvider } from "@/components/preferences/preferences-provider";
@@ -25,12 +26,12 @@ export default async function WikiLayout({
 
   return (
     <PreferencesProvider initial={preferences}>
-      <div className="app-shell">
+      <SidebarProvider>
         <AppHeader />
         <WikiSidebar recentViews={recentViews} />
         {children}
         <SiteFooter />
-      </div>
+      </SidebarProvider>
     </PreferencesProvider>
   );
 }

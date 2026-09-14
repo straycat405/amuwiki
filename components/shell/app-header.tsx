@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { signOut } from "@/app/actions/auth";
 import { CommandPalette } from "@/components/search/command-palette";
+import { SidebarToggleButton } from "@/components/shell/sidebar-toggle-button";
 
 export function AppHeader() {
   return (
@@ -10,10 +11,13 @@ export function AppHeader() {
       <a className="skip-link" href="#main-content">
         본문으로 이동
       </a>
-      <Link className="brand" href="/" aria-label="아무위키 홈">
-        <span className="brand__mark" aria-hidden="true" />
-        <span>아무위키</span>
-      </Link>
+      <div className="header-leading">
+        <SidebarToggleButton />
+        <Link className="brand" href="/" aria-label="아무위키 홈">
+          <span className="brand__mark" aria-hidden="true" />
+          <span>아무위키</span>
+        </Link>
+      </div>
       <CommandPalette />
       <div className="header-actions">
         <Link

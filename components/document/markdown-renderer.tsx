@@ -1,6 +1,8 @@
 "use client";
 
+import { X } from "lucide-react";
 import type { ComponentProps } from "react";
+import { useEffect, useState } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { PluggableList } from "unified";
@@ -37,6 +39,16 @@ export function MarkdownRenderer({
   wikiLinkResolutions,
 }: MarkdownRendererProps) {
   const { preferences } = usePreferences();
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!lightboxSrc) return;
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setLightboxSrc(null);
+    };
+    window.addEventListener("keydown", handleKeydown);
+    return () => window.removeEventListener("keydown", handleKeydown);
+  }, [lightboxSrc]);
 
   const remarkPlugins: PluggableList = [
     remarkGfm,
@@ -47,12 +59,42 @@ export function MarkdownRenderer({
   return (
     <div className="markdown-body">
       <ReactMarkdown
-        components={{ a: SafeLink }}
+        components={{
+          a: SafeLink,
+          img: ({ src, alt }) =>
+            typeof src === "string" ? (
+              <img
+                alt={alt ?? ""}
+                loading="lazy"
+                onClick={() => setLightboxSrc(src)}
+                src={src}
+              />
+            ) : null,
+        }}
         remarkPlugins={remarkPlugins}
         urlTransform={defaultUrlTransform}
       >
         {markdown}
       </ReactMarkdown>
+      {lightboxSrc ? (
+        <div
+          className="image-lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label="이미지 확대 보기"
+          onClick={() => setLightboxSrc(null)}
+        >
+          <button
+            className="image-lightbox__close"
+            type="button"
+            aria-label="닫기"
+            onClick={() => setLightboxSrc(null)}
+          >
+            <X size={20} aria-hidden="true" />
+          </button>
+          <img alt="" src={lightboxSrc} onClick={(event) => event.stopPropagation()} />
+        </div>
+      ) : null}
     </div>
   );
 }
