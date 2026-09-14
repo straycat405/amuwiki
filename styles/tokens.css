@@ -1,0 +1,16 @@
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 28px;
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --header-height: 64px;
+  --sidebar-width: 280px;
+  --content-width: 744px;
+  --shadow-sm: 0 1px 2px rgb(23 33 28 / 5%), 0 5px 18px rgb(23 33 28 / 6%);
+  --shadow-card: 0 20px 55px rgb(23 33 28 / 16%), 0 3px 12px rgb(23 33 28 / 8%);
+}

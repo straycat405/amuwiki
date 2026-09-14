@@ -1,0 +1,13 @@
+:root,
+:root[data-font="pretendard"] {
+  --font-document: Pretendard, "Apple SD Gothic Neo", Inter, system-ui, sans-serif;
+  --font-ui: Pretendard, "Apple SD Gothic Neo", Inter, system-ui, sans-serif;
+}
+
+:root[data-font="suit"] {
+  --font-document: SUIT, "Apple SD Gothic Neo", Inter, system-ui, sans-serif;
+}
+
+:root[data-font="noto-sans-kr"] {
+  --font-document: "Noto Sans KR", "Apple SD Gothic Neo", Inter, system-ui, sans-serif;
+}
