@@ -1672,13 +1672,13 @@ button {
   text-decoration: underline;
 }
 
-/* "midnight" theme: bolder, tighter headings to match its reference look. */
-:root[data-theme="midnight"] .document-view__header h1,
-:root[data-theme="midnight"] .document-index__header h1,
-:root[data-theme="midnight"] .trash-view__header h1,
-:root[data-theme="midnight"] .settings-view__header h1,
-:root[data-theme="midnight"] .search-view__header h1,
-:root[data-theme="midnight"] .brand {
+/* Bolder, tighter page-title headings across all themes (unified to the "midnight" spec). */
+.document-view__header h1,
+.document-index__header h1,
+.trash-view__header h1,
+.settings-view__header h1,
+.search-view__header h1,
+.brand {
   font-weight: 800;
   letter-spacing: -0.03em;
 }
