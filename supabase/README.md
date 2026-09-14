@@ -7,6 +7,13 @@ npx supabase start
 npx supabase db reset
 ```
 
+RLS 동작 검증:
+
+```bash
+docker cp supabase/tests/rls.sql supabase_db_amuwiki:/tmp/rls.sql
+docker exec supabase_db_amuwiki psql -U postgres -d postgres -f /tmp/rls.sql
+```
+
 프로덕션에는 Dashboard SQL Editor가 아니라 Supabase CLI의 연결된 프로젝트 배포를 사용합니다.
 
 ```bash

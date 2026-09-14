@@ -12,6 +12,7 @@ test-results/
 
 # Supabase local state
 supabase/.temp/
+supabase/.branches/
 
 # local configuration
 .env
