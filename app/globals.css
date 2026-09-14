@@ -193,16 +193,21 @@ button {
 
 .wiki-sidebar {
   position: sticky;
-  display: flex;
-  flex-direction: column;
   top: var(--header-height);
   grid-area: sidebar;
   min-width: 0;
   height: calc(100vh - var(--header-height));
   border-right: 1px solid var(--color-border);
-  padding: var(--space-6) var(--space-5);
   overflow: hidden;
   transition: opacity 0.15s ease;
+}
+
+.wiki-sidebar__inner {
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  height: 100%;
+  padding: var(--space-6) var(--space-5);
 }
 
 .sidebar-heading {
