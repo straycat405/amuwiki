@@ -6,8 +6,11 @@ import { z } from "zod";
 import {
   archiveDocument,
   createDocument,
+  createDraftDocument,
+  deleteDraftDocument,
   getDeletedDocumentById,
   getDocumentById,
+  reparentAttachments,
   restoreDocument,
   updateDocument,
 } from "@/features/documents/data";
@@ -57,7 +60,7 @@ export async function createDocumentAction(
   _previousState: DocumentActionState,
   formData: FormData,
 ): Promise<DocumentActionState> {
-  await requireOwner();
+  const user = await requireOwner();
   const parsed = createDocumentSchema.safeParse(
     documentInputFromFormData(formData),
   );
@@ -68,12 +71,30 @@ export async function createDocumentAction(
   if (!result.ok)
     return { status: "error", message: writeError(result.reason) };
 
+  const draftDocumentId = formData.get("draftDocumentId");
+  if (typeof draftDocumentId === "string" && draftDocumentId && result.id) {
+    await reparentAttachments(supabase, user.id, draftDocumentId, result.id);
+    await deleteDraftDocument(supabase, user.id, draftDocumentId);
+  }
+
   revalidatePath("/");
   return {
     status: "success",
     message: "저장했습니다.",
     redirectTo: `/documents/${slugifyDocumentTitle(parsed.data.title)}`,
   };
+}
+
+export async function createDraftDocumentAction(
+  title: string,
+): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
+  const user = await requireOwner();
+  const supabase = await createClient();
+  const draft = await createDraftDocument(supabase, user.id, title);
+  if (!draft) {
+    return { ok: false, message: "이미지를 첨부할 준비를 하지 못했습니다." };
+  }
+  return { ok: true, id: draft.id };
 }
 
 export async function updateDocumentAction(

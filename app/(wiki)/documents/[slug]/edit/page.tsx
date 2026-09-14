@@ -23,6 +23,7 @@ export default async function EditDocumentPage({
     <main className="document-stage document-stage--editor" id="main-content">
       <DocumentEditor
         action={updateDocumentAction.bind(null, document.id)}
+        documentId={document.id}
         draftKey={document.id}
         initialDocument={{
           title: document.title,

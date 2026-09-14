@@ -4,9 +4,7 @@ import {
   getDocumentBySlug,
   resolveWikiLinkTargets,
 } from "@/features/documents/data";
-import { isOwnerEmail } from "@/features/auth/owner";
-import { getServerEnv } from "@/lib/env";
-import { createClient } from "@/lib/supabase/server";
+import { requireApiUser } from "@/lib/auth/api-auth";
 
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("slug")?.trim();
@@ -14,11 +12,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ message: "잘못된 문서입니다." }, { status: 400 });
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user || !isOwnerEmail(user.email, getServerEnv().OWNER_EMAIL)) {
+  const { supabase, user } = await requireApiUser();
+  if (!user) {
     return NextResponse.json({ message: "인증이 필요합니다." }, { status: 401 });
   }
 

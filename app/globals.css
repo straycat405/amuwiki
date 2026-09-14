@@ -797,7 +797,7 @@ button {
 .document-editor__toolbar {
   display: grid;
   min-height: 64px;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
   align-items: center;
   gap: var(--space-4);
   border-bottom: 1px solid var(--color-border);
@@ -1020,6 +1020,14 @@ button {
 .markdown-body a {
   color: var(--color-accent);
   text-underline-offset: 0.18em;
+}
+
+.markdown-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  margin: var(--space-4) 0;
 }
 
 .markdown-body .concept-link {
@@ -1248,7 +1256,7 @@ button {
   }
 
   .document-editor__toolbar {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr auto auto;
   }
 
   .document-editor__status {

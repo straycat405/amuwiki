@@ -41,6 +41,7 @@ export async function listDocuments(
     .select("id, slug, title, summary, status, updated_at")
     .eq("owner_id", ownerId)
     .is("deleted_at", null)
+    .neq("status", "draft")
     .order("updated_at", { ascending: false })
     .limit(limit);
 
@@ -292,4 +293,63 @@ export async function restoreDocument(
   });
 
   return lifecycleResult(data, error);
+}
+
+/**
+ * Creates a hidden placeholder document so an image can be attached before the
+ * user has saved a brand-new document for the first time. It carries no
+ * revision or link history — it only exists to give `attachments.document_id`
+ * something to point at until the real save (createDocumentAction) reparents
+ * the attachments onto the finished document and deletes this row.
+ */
+export async function createDraftDocument(
+  supabase: SupabaseClient,
+  ownerId: string,
+  rawTitle: string,
+): Promise<{ id: string } | null> {
+  const baseTitle = rawTitle.trim() || `제목 없음 ${Date.now()}`;
+  const title = baseTitle.slice(0, 200);
+  const normalizedTitle = normalizeConcept(title);
+  const slug = slugifyDocumentTitle(title) || `draft-${Date.now()}`;
+
+  const { data, error } = await supabase
+    .from("documents")
+    .insert({
+      owner_id: ownerId,
+      title,
+      normalized_title: normalizedTitle,
+      slug,
+      status: "draft",
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) return null;
+  return { id: data.id as string };
+}
+
+export async function reparentAttachments(
+  supabase: SupabaseClient,
+  ownerId: string,
+  fromDocumentId: string,
+  toDocumentId: string,
+): Promise<void> {
+  await supabase
+    .from("attachments")
+    .update({ document_id: toDocumentId })
+    .eq("owner_id", ownerId)
+    .eq("document_id", fromDocumentId);
+}
+
+export async function deleteDraftDocument(
+  supabase: SupabaseClient,
+  ownerId: string,
+  documentId: string,
+): Promise<void> {
+  await supabase
+    .from("documents")
+    .delete()
+    .eq("owner_id", ownerId)
+    .eq("id", documentId)
+    .eq("status", "draft");
 }
