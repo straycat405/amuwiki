@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-export const themeKeys = ["paper-green", "toss-blue", "ink-indigo"] as const;
+export const themeKeys = [
+  "paper-green",
+  "toss-blue",
+  "ink-indigo",
+  "midnight",
+] as const;
 export const colorModes = ["system", "light", "dark"] as const;
 export const fontPresets = ["pretendard", "suit", "noto-sans-kr"] as const;
 export const fontScales = ["small", "normal", "large"] as const;

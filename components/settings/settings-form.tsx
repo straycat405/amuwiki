@@ -13,10 +13,11 @@ import {
   type Preferences,
 } from "@/features/preferences/preferences";
 
-const themeLabels: Record<Preferences["theme"], string> = {
-  "paper-green": "페이퍼 그린",
-  "toss-blue": "토스 블루",
-  "ink-indigo": "잉크 인디고",
+const themeSwatchColors: Record<Preferences["theme"], string> = {
+  "paper-green": "#1f6853",
+  "toss-blue": "#3182f6",
+  "ink-indigo": "#5856d6",
+  midnight: "oklch(0.65 0.2 264)",
 };
 
 const modeLabels: Record<Preferences["mode"], string> = {
@@ -90,6 +91,33 @@ function OptionGroup<T extends string>({
   );
 }
 
+function ThemeSwatchGroup({
+  value,
+  onChange,
+}: {
+  value: Preferences["theme"];
+  onChange: (value: Preferences["theme"]) => void;
+}) {
+  return (
+    <div className="theme-swatches" role="radiogroup" aria-label="색상 테마">
+      {themeKeys.map((key, index) => (
+        <button
+          key={key}
+          type="button"
+          role="radio"
+          aria-checked={value === key}
+          aria-label={`색상 테마 ${index + 1}`}
+          className={
+            "theme-swatch" + (value === key ? " theme-swatch--active" : "")
+          }
+          style={{ background: themeSwatchColors[key] }}
+          onClick={() => onChange(key)}
+        />
+      ))}
+    </div>
+  );
+}
+
 function SettingsSection({
   title,
   description,
@@ -116,12 +144,8 @@ export function SettingsForm() {
   return (
     <div className="settings-form">
       <SettingsSection title="테마">
-        <OptionGroup
-          legend="색상 테마"
-          name="theme"
+        <ThemeSwatchGroup
           value={preferences.theme}
-          options={themeKeys}
-          labels={themeLabels}
           onChange={(value) => updatePreference("theme", value)}
         />
       </SettingsSection>
