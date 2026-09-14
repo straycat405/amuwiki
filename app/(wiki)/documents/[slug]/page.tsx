@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { archiveDocumentAction } from "@/app/(wiki)/documents/actions";
 import { DocumentLifecycleButton } from "@/components/document/document-lifecycle-button";
-import { MarkdownRenderer } from "@/components/document/markdown-renderer";
+import { WikiLinkExplorer } from "@/components/document/wiki-link-explorer";
 import {
   getDocumentBySlug,
   listBacklinks,
@@ -52,7 +52,7 @@ export default async function DocumentPage({
             />
           </div>
         </header>
-        <MarkdownRenderer
+        <WikiLinkExplorer
           markdown={document.body_markdown}
           wikiLinkResolutions={wikiLinkResolutions}
         />

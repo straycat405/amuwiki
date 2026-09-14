@@ -739,6 +739,111 @@ button {
   text-decoration-color: var(--color-danger);
 }
 
+.wiki-link-explorer {
+  position: relative;
+}
+
+.preview-card {
+  position: fixed;
+  z-index: 60;
+  width: min(360px, calc(100vw - 24px));
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: 0 18px 50px rgb(20 28 38 / 18%);
+  font-family: var(--font-document);
+}
+
+.preview-card--hover {
+  pointer-events: auto;
+}
+
+.preview-card--pinned {
+  z-index: 61;
+  resize: none;
+}
+
+.preview-card__header {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-subtle);
+  padding: 0 var(--space-3);
+  color: var(--color-muted);
+  font: 650 0.85rem/1.3 var(--font-ui);
+}
+
+.preview-card__header a {
+  overflow: hidden;
+  color: var(--color-text);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-card__header a:hover {
+  text-decoration: underline;
+}
+
+.preview-card__drag,
+.preview-card__close {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.preview-card__drag {
+  cursor: grab;
+  touch-action: none;
+}
+
+.preview-card__drag:active {
+  cursor: grabbing;
+}
+
+.preview-card__drag:hover,
+.preview-card__close:hover {
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text);
+}
+
+.preview-card__close {
+  margin-left: auto;
+}
+
+.preview-card__summary {
+  margin: 0;
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.preview-card__body {
+  max-height: min(360px, calc(100vh - 120px));
+  overflow: auto;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.preview-card__body .markdown-body {
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.preview-card__body .markdown-body > :first-child {
+  margin-top: 0;
+}
+
 .backlinks {
   margin-top: var(--space-8);
   border-top: 1px solid var(--color-border);
