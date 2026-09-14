@@ -2,7 +2,11 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { MarkdownRenderer } from "@/components/document/markdown-renderer";
-import { normalizeConcept, slugifyDocumentTitle } from "@/lib/markdown/slug";
+import {
+  decodeDocumentSlug,
+  normalizeConcept,
+  slugifyDocumentTitle,
+} from "@/lib/markdown/slug";
 import { extractWikiLinkTargets } from "@/lib/markdown/wiki-links";
 
 describe("MarkdownRenderer", () => {
@@ -68,5 +72,12 @@ describe("concept normalization", () => {
   it("normalizes Korean whitespace and casing", () => {
     expect(normalizeConcept("  React   상태  ")).toBe("react 상태");
     expect(slugifyDocumentTitle("문명 6: 과학 승리")).toBe("문명-6-과학-승리");
+  });
+
+  it("decodes a browser-encoded document slug", () => {
+    expect(decodeDocumentSlug("%EB%A7%81%ED%81%AC-%ED%85%8C%EC%8A%A4%ED%8A%B8")).toBe(
+      "링크-테스트",
+    );
+    expect(decodeDocumentSlug("%E0%A4%A")).toBeNull();
   });
 });

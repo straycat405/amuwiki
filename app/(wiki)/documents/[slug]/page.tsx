@@ -11,12 +11,15 @@ import {
   resolveWikiLinkTargets,
 } from "@/features/documents/data";
 import { requireOwner } from "@/lib/auth/require-owner";
+import { decodeDocumentSlug } from "@/lib/markdown/slug";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DocumentPage({
   params,
 }: PageProps<"/documents/[slug]">) {
-  const { slug } = await params;
+  const { slug: encodedSlug } = await params;
+  const slug = decodeDocumentSlug(encodedSlug);
+  if (!slug) notFound();
   const user = await requireOwner();
   const supabase = await createClient();
   const document = await getDocumentBySlug(supabase, user.id, slug);

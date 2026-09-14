@@ -12,3 +12,11 @@ export function slugifyDocumentTitle(value: string): string {
 export function slugifyHeading(value: string): string {
   return slugifyDocumentTitle(value);
 }
+
+export function decodeDocumentSlug(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
