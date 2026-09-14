@@ -1,4 +1,5 @@
-import { Settings } from "lucide-react";
+import { FileUp, Settings } from "lucide-react";
+import Link from "next/link";
 
 import { SettingsForm } from "@/components/settings/settings-form";
 
@@ -13,6 +14,16 @@ export default function SettingsPage() {
           <h1 id="settings-title">설정</h1>
         </header>
         <SettingsForm />
+        <div className="settings-section">
+          <header className="settings-section__header">
+            <h2>Markdown 가져오기</h2>
+            <p>여러 개의 .md, .markdown, .txt 파일을 문서로 가져옵니다.</p>
+          </header>
+          <Link className="secondary-button" href="/settings/import">
+            <FileUp size={16} aria-hidden="true" />
+            가져오기 열기
+          </Link>
+        </div>
       </section>
     </main>
   );

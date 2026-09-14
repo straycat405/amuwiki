@@ -221,6 +221,46 @@ export async function listBacklinks(
   }));
 }
 
+/** Best-effort: silently ignores alias conflicts (another document already owns that alias). */
+export async function addDocumentAlias(
+  supabase: SupabaseClient,
+  ownerId: string,
+  documentId: string,
+  alias: string,
+): Promise<void> {
+  const trimmed = alias.trim().slice(0, 200);
+  if (!trimmed) return;
+  await supabase.from("document_aliases").insert({
+    owner_id: ownerId,
+    document_id: documentId,
+    alias: trimmed,
+    normalized_alias: normalizeConcept(trimmed),
+  });
+}
+
+export async function listNormalizedTitleSet(
+  supabase: SupabaseClient,
+  ownerId: string,
+): Promise<Set<string>> {
+  const [{ data: documents }, { data: aliases }] = await Promise.all([
+    supabase
+      .from("documents")
+      .select("normalized_title")
+      .eq("owner_id", ownerId)
+      .is("deleted_at", null)
+      .neq("status", "draft"),
+    supabase
+      .from("document_aliases")
+      .select("normalized_alias")
+      .eq("owner_id", ownerId),
+  ]);
+
+  const set = new Set<string>();
+  for (const row of documents ?? []) set.add(row.normalized_title);
+  for (const row of aliases ?? []) set.add(row.normalized_alias);
+  return set;
+}
+
 export async function createDocument(
   supabase: SupabaseClient,
   input: DocumentInput,
