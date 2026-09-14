@@ -1,7 +1,8 @@
-import { LogOut, Plus, Search, Settings } from "lucide-react";
+import { LogOut, Plus, Settings } from "lucide-react";
 import Link from "next/link";
 
 import { signOut } from "@/app/actions/auth";
+import { CommandPalette } from "@/components/search/command-palette";
 
 export function AppHeader() {
   return (
@@ -13,11 +14,7 @@ export function AppHeader() {
         <span className="brand__mark" aria-hidden="true" />
         <span>아무위키</span>
       </Link>
-      <button className="search-button" type="button" aria-label="문서 검색">
-        <Search size={17} aria-hidden="true" />
-        <span>검색</span>
-        <kbd>⌘ K</kbd>
-      </button>
+      <CommandPalette />
       <div className="header-actions">
         <Link
           className="icon-button"

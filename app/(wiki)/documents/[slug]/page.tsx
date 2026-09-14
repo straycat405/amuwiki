@@ -10,6 +10,7 @@ import {
   listBacklinks,
   resolveWikiLinkTargets,
 } from "@/features/documents/data";
+import { recordDocumentView } from "@/features/history/data";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { decodeDocumentSlug } from "@/lib/markdown/slug";
 import { createClient } from "@/lib/supabase/server";
@@ -27,6 +28,7 @@ export default async function DocumentPage({
   const [wikiLinkResolutions, backlinks] = await Promise.all([
     resolveWikiLinkTargets(supabase, user.id, document.body_markdown),
     listBacklinks(supabase, user.id, document.id),
+    recordDocumentView(supabase, document.id),
   ]);
 
   return (

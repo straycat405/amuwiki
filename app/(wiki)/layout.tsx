@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/shell/app-header";
 import { SiteFooter } from "@/components/shell/site-footer";
 import { WikiSidebar } from "@/components/shell/wiki-sidebar";
 import { PreferencesProvider } from "@/components/preferences/preferences-provider";
-import { listDocuments } from "@/features/documents/data";
+import { listRecentViews } from "@/features/history/data";
 import { getPreferences } from "@/features/preferences/data";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { createClient } from "@/lib/supabase/server";
@@ -18,8 +18,8 @@ export default async function WikiLayout({
 }) {
   const user = await requireOwner();
   const supabase = await createClient();
-  const [documents, preferences] = await Promise.all([
-    listDocuments(supabase, user.id, 20),
+  const [recentViews, preferences] = await Promise.all([
+    listRecentViews(supabase, user.id, 20),
     getPreferences(supabase, user.id),
   ]);
 
@@ -27,7 +27,7 @@ export default async function WikiLayout({
     <PreferencesProvider initial={preferences}>
       <div className="app-shell">
         <AppHeader />
-        <WikiSidebar documents={documents} />
+        <WikiSidebar recentViews={recentViews} />
         {children}
         <SiteFooter />
       </div>
