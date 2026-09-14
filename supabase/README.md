@@ -14,6 +14,8 @@ docker cp supabase/tests/rls.sql supabase_db_amuwiki:/tmp/rls.sql
 docker exec supabase_db_amuwiki psql -U postgres -d postgres -f /tmp/rls.sql
 docker cp supabase/tests/document_crud.sql supabase_db_amuwiki:/tmp/document_crud.sql
 docker exec supabase_db_amuwiki psql -U postgres -d postgres -f /tmp/document_crud.sql
+docker cp supabase/tests/document_lifecycle.sql supabase_db_amuwiki:/tmp/document_lifecycle.sql
+docker exec supabase_db_amuwiki psql -U postgres -d postgres -f /tmp/document_lifecycle.sql
 ```
 
 프로덕션에는 Dashboard SQL Editor가 아니라 Supabase CLI의 연결된 프로젝트 배포를 사용합니다.

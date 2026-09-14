@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { DocumentInput } from "@/features/documents/document-schema";
 import type {
+  DeletedDocumentListItem,
   DocumentListItem,
   WikiDocument,
 } from "@/features/documents/types";
@@ -10,6 +11,13 @@ import { normalizeConcept, slugifyDocumentTitle } from "@/lib/markdown/slug";
 type DocumentWriteResult =
   | { ok: true; id?: string; version?: number }
   | { ok: false; reason: "conflict" | "duplicate" | "not-found" | "unknown" };
+
+function lifecycleResult(data: unknown, error: { code?: string } | null): DocumentWriteResult {
+  if (error?.code === "40001") return { ok: false, reason: "conflict" };
+  if (error?.code === "P0002") return { ok: false, reason: "not-found" };
+  if (error || typeof data !== "number") return { ok: false, reason: "unknown" };
+  return { ok: true, version: data };
+}
 
 export async function listDocuments(
   supabase: SupabaseClient,
@@ -26,6 +34,23 @@ export async function listDocuments(
 
   if (error) throw new Error("문서 목록을 불러오지 못했습니다.");
   return (data ?? []) as DocumentListItem[];
+}
+
+export async function listDeletedDocuments(
+  supabase: SupabaseClient,
+  ownerId: string,
+  limit = 50,
+): Promise<DeletedDocumentListItem[]> {
+  const { data, error } = await supabase
+    .from("documents")
+    .select("id, slug, title, summary, status, updated_at, deleted_at, version")
+    .eq("owner_id", ownerId)
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error("휴지통을 불러오지 못했습니다.");
+  return (data ?? []) as DeletedDocumentListItem[];
 }
 
 export async function getDocumentBySlug(
@@ -63,6 +88,25 @@ export async function getDocumentById(
     .maybeSingle();
 
   if (error) throw new Error("문서를 불러오지 못했습니다.");
+  return data as WikiDocument | null;
+}
+
+export async function getDeletedDocumentById(
+  supabase: SupabaseClient,
+  ownerId: string,
+  documentId: string,
+): Promise<WikiDocument | null> {
+  const { data, error } = await supabase
+    .from("documents")
+    .select(
+      "id, slug, title, summary, status, body_markdown, frontmatter, version, created_at, updated_at",
+    )
+    .eq("owner_id", ownerId)
+    .eq("id", documentId)
+    .not("deleted_at", "is", null)
+    .maybeSingle();
+
+  if (error) throw new Error("휴지통 문서를 불러오지 못했습니다.");
   return data as WikiDocument | null;
 }
 
@@ -110,4 +154,30 @@ export async function updateDocument(
   if (error || typeof data !== "number")
     return { ok: false, reason: "unknown" };
   return { ok: true, version: data };
+}
+
+export async function archiveDocument(
+  supabase: SupabaseClient,
+  documentId: string,
+  expectedVersion: number,
+): Promise<DocumentWriteResult> {
+  const { data, error } = await supabase.rpc("archive_document", {
+    p_document_id: documentId,
+    p_expected_version: expectedVersion,
+  });
+
+  return lifecycleResult(data, error);
+}
+
+export async function restoreDocument(
+  supabase: SupabaseClient,
+  documentId: string,
+  expectedVersion: number,
+): Promise<DocumentWriteResult> {
+  const { data, error } = await supabase.rpc("restore_document", {
+    p_document_id: documentId,
+    p_expected_version: expectedVersion,
+  });
+
+  return lifecycleResult(data, error);
 }

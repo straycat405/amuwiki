@@ -13,3 +13,8 @@ export type WikiDocument = DocumentListItem & {
   version: number;
   created_at: string;
 };
+
+export type DeletedDocumentListItem = DocumentListItem & {
+  deleted_at: string;
+  version: number;
+};
