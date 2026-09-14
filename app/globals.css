@@ -75,6 +75,7 @@ button {
     "sidebar main" minmax(calc(100vh - var(--header-height)), auto)
     "sidebar footer" auto /
     var(--sidebar-width) minmax(0, 1fr);
+  transition: grid-template-columns 0.22s ease;
 }
 
 .app-shell[data-sidebar="collapsed"] {
@@ -82,7 +83,8 @@ button {
 }
 
 .app-shell[data-sidebar="collapsed"] .wiki-sidebar {
-  display: none;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .app-header {
@@ -195,9 +197,12 @@ button {
   flex-direction: column;
   top: var(--header-height);
   grid-area: sidebar;
+  min-width: 0;
   height: calc(100vh - var(--header-height));
   border-right: 1px solid var(--color-border);
   padding: var(--space-6) var(--space-5);
+  overflow: hidden;
+  transition: opacity 0.15s ease;
 }
 
 .sidebar-heading {
