@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import type { ReactNode } from "react";
 
 import "./globals.css";
@@ -38,10 +39,14 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       data-font="pretendard"
       suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: appearanceScript }} />
-      </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Script
+          id="amuwiki-appearance"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: appearanceScript }}
+        />
+      </body>
     </html>
   );
 }
