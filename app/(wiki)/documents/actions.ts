@@ -4,8 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import {
+  archiveDocument,
   createDocument,
+  getDeletedDocumentById,
   getDocumentById,
+  restoreDocument,
   updateDocument,
 } from "@/features/documents/data";
 import type { DocumentActionState } from "@/features/documents/action-state";
@@ -18,9 +21,16 @@ import { slugifyDocumentTitle } from "@/lib/markdown/slug";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { createClient } from "@/lib/supabase/server";
 
+const lifecycleSchema = z.object({
+  documentId: z.uuid(),
+  expectedVersion: z.number().int().positive(),
+});
+
 function validationError(error: z.ZodError): DocumentActionState {
   const messagesFor = (field: string) =>
-    error.issues.filter((issue) => issue.path[0] === field).map((issue) => issue.message);
+    error.issues
+      .filter((issue) => issue.path[0] === field)
+      .map((issue) => issue.message);
   return {
     status: "error",
     message: "입력 내용을 확인해주세요.",
@@ -70,6 +80,7 @@ export async function updateDocumentAction(
   _previousState: DocumentActionState,
   formData: FormData,
 ): Promise<DocumentActionState> {
+  void _previousState;
   const user = await requireOwner();
   const parsedId = z.uuid().safeParse(documentId);
   if (!parsedId.success)
@@ -106,5 +117,79 @@ export async function updateDocumentAction(
     status: "success",
     message: "저장했습니다.",
     savedVersion: result.version,
+  };
+}
+
+export async function archiveDocumentAction(
+  documentId: string,
+  expectedVersion: number,
+  _previousState: DocumentActionState,
+): Promise<DocumentActionState> {
+  void _previousState;
+  const user = await requireOwner();
+  const parsed = lifecycleSchema.safeParse({ documentId, expectedVersion });
+  if (!parsed.success)
+    return { status: "error", message: "잘못된 문서입니다." };
+
+  const supabase = await createClient();
+  const document = await getDocumentById(
+    supabase,
+    user.id,
+    parsed.data.documentId,
+  );
+  if (!document) return { status: "error", message: writeError("not-found") };
+
+  const result = await archiveDocument(
+    supabase,
+    parsed.data.documentId,
+    parsed.data.expectedVersion,
+  );
+  if (!result.ok)
+    return { status: "error", message: writeError(result.reason) };
+
+  revalidatePath("/");
+  revalidatePath("/trash");
+  revalidatePath(`/documents/${document.slug}`);
+  return {
+    status: "success",
+    message: "휴지통으로 이동했습니다.",
+    redirectTo: "/",
+  };
+}
+
+export async function restoreDocumentAction(
+  documentId: string,
+  expectedVersion: number,
+  _previousState: DocumentActionState,
+): Promise<DocumentActionState> {
+  void _previousState;
+  const user = await requireOwner();
+  const parsed = lifecycleSchema.safeParse({ documentId, expectedVersion });
+  if (!parsed.success)
+    return { status: "error", message: "잘못된 문서입니다." };
+
+  const supabase = await createClient();
+  const document = await getDeletedDocumentById(
+    supabase,
+    user.id,
+    parsed.data.documentId,
+  );
+  if (!document) return { status: "error", message: writeError("not-found") };
+
+  const result = await restoreDocument(
+    supabase,
+    parsed.data.documentId,
+    parsed.data.expectedVersion,
+  );
+  if (!result.ok)
+    return { status: "error", message: writeError(result.reason) };
+
+  revalidatePath("/");
+  revalidatePath("/trash");
+  revalidatePath(`/documents/${document.slug}`);
+  return {
+    status: "success",
+    message: "문서를 복원했습니다.",
+    redirectTo: `/documents/${document.slug}`,
   };
 }

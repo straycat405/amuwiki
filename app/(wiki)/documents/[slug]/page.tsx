@@ -2,6 +2,8 @@ import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { archiveDocumentAction } from "@/app/(wiki)/documents/actions";
+import { DocumentLifecycleButton } from "@/components/document/document-lifecycle-button";
 import { MarkdownRenderer } from "@/components/document/markdown-renderer";
 import { getDocumentBySlug } from "@/features/documents/data";
 import { requireOwner } from "@/lib/auth/require-owner";
@@ -24,13 +26,23 @@ export default async function DocumentPage({
             <h1>{document.title}</h1>
             {document.summary ? <p>{document.summary}</p> : null}
           </div>
-          <Link
-            className="secondary-button"
-            href={`/documents/${document.slug}/edit`}
-          >
-            <Pencil size={16} aria-hidden="true" />
-            편집
-          </Link>
+          <div className="document-view__actions">
+            <Link
+              className="secondary-button"
+              href={`/documents/${document.slug}/edit`}
+            >
+              <Pencil size={16} aria-hidden="true" />
+              편집
+            </Link>
+            <DocumentLifecycleButton
+              action={archiveDocumentAction.bind(
+                null,
+                document.id,
+                document.version,
+              )}
+              kind="archive"
+            />
+          </div>
         </header>
         <MarkdownRenderer markdown={document.body_markdown} />
       </article>

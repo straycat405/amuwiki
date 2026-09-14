@@ -1,3 +1,4 @@
+import { Trash2 } from "lucide-react";
 import Link from "next/link";
 
 import type { DocumentListItem } from "@/features/documents/types";
@@ -17,6 +18,10 @@ export function WikiSidebar({ documents }: { documents: DocumentListItem[] }) {
           ))}
         </ul>
       )}
+      <Link className="sidebar-utility-link" href="/trash">
+        <Trash2 size={15} aria-hidden="true" />
+        휴지통
+      </Link>
     </aside>
   );
 }
