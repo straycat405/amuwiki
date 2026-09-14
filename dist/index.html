@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="개념을 문맥 안에서 탐색하는 개인 위키 프로토타입">
+  <title>갈피 — 개인 지식 위키</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f5c4a'/%3E%3Cpath d='M19 14h25a5 5 0 0 1 5 5v31H24a9 9 0 0 1-9-9V18a4 4 0 0 1 4-4Z' fill='%23f4efe5'/%3E%3Cpath d='M24 14v35M31 25h11M31 33h11' stroke='%231f5c4a' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f4ef;
+      --surface: rgba(255,255,255,.86);
+      --surface-solid: #fff;
+      --surface-2: #ecebe5;
+      --text: #202622;
+      --muted: #6d746f;
+      --line: #d9dbd5;
+      --accent: #1f6853;
+      --accent-soft: #dcece6;
+      --accent-ink: #174b3d;
+      --mark: #f0c86b;
+      --shadow: 0 20px 55px rgba(33,42,37,.15), 0 3px 12px rgba(33,42,37,.08);
+      --header-h: 72px;
+      --sidebar-w: 278px;
+    }
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --bg: #121614;
+      --surface: rgba(28,34,31,.9);
+      --surface-solid: #1c221f;
+      --surface-2: #252d29;
+      --text: #e8ede9;
+      --muted: #a0aaa4;
+      --line: #37423c;
+      --accent: #76c6a8;
+      --accent-soft: #203d33;
+      --accent-ink: #a4dec8;
+      --mark: #e4bb60;
+      --shadow: 0 24px 64px rgba(0,0,0,.48), 0 3px 12px rgba(0,0,0,.3);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Pretendard, "Apple SD Gothic Neo", Inter, system-ui, sans-serif;
+      line-height: 1.72;
+      transition: background .2s ease, color .2s ease;
+    }
+    button, input { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    :focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 48%, transparent); outline-offset: 2px; }
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      height: var(--header-h); display: grid;
+      grid-template-columns: var(--sidebar-w) minmax(260px, 640px) 1fr;
+      align-items: center; gap: 24px; padding: 0 28px;
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      border-bottom: 1px solid var(--line); backdrop-filter: blur(18px);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 760; letter-spacing: -.04em; font-size: 1.22rem; }
+    .brand-mark { width: 31px; height: 34px; border-radius: 7px 10px 10px 7px; background: var(--accent); position: relative; box-shadow: inset 4px 0 rgba(255,255,255,.18); }
+    .brand-mark::after { content:""; position:absolute; width:9px; height:14px; right:5px; bottom:-5px; background:var(--mark); clip-path:polygon(0 0,100% 0,100% 100%,50% 69%,0 100%); }
+    .search-trigger {
+      width: 100%; height: 42px; border: 1px solid var(--line); border-radius: 12px;
+      background: var(--surface); display: flex; align-items: center; gap: 10px;
+      padding: 0 13px; color: var(--muted); box-shadow: 0 1px 1px rgba(0,0,0,.03);
+    }
+    .search-trigger:hover { border-color: color-mix(in srgb, var(--accent) 48%, var(--line)); }
+    .search-trigger kbd { margin-left:auto; border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:0 7px; font-size:.72rem; background:var(--surface-2); }
+    .top-actions { justify-self:end; display:flex; align-items:center; gap:8px; }
+    .icon-btn { border: 1px solid transparent; background: transparent; border-radius: 10px; width: 40px; height: 40px; display:grid; place-items:center; }
+    .icon-btn:hover { background: var(--surface-2); }
+    .layout { display:grid; grid-template-columns: var(--sidebar-w) minmax(0,1fr); min-height: calc(100vh - var(--header-h)); }
+    .sidebar { position:sticky; top:var(--header-h); align-self:start; height:calc(100vh - var(--header-h)); padding:28px 20px; border-right:1px solid var(--line); overflow:auto; }
+    .side-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+    .side-head h2 { margin:0; font-size:.78rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); }
+    .text-btn { border:0; background:transparent; color:var(--accent); font-size:.82rem; font-weight:700; padding:5px 7px; border-radius:7px; }
+    .text-btn:hover { background:var(--accent-soft); }
+    .recent-list { list-style:none; margin:0; padding:0; display:grid; gap:3px; }
+    .recent-item { display:flex; align-items:center; gap:6px; border-radius:10px; }
+    .recent-link { flex:1; min-width:0; display:block; border:0; background:transparent; text-align:left; border-radius:10px; padding:10px 11px; }
+    .recent-link:hover { background:var(--surface-2); }
+    .recent-link strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.9rem; }
+    .recent-link span { display:block; color:var(--muted); font-size:.74rem; margin-top:1px; }
+    .remove-recent { display:none; border:0; background:transparent; color:var(--muted); width:30px; height:30px; border-radius:8px; }
+    .editing .remove-recent { display:block; }
+    .remove-recent:hover { color:#c54c4c; background:color-mix(in srgb, #c54c4c 12%, transparent); }
+    .side-note { margin:26px 10px 0; padding-top:18px; border-top:1px solid var(--line); font-size:.77rem; color:var(--muted); }
+    .main { min-width:0; padding:56px clamp(28px, 7vw, 104px) 100px; }
+    .article { max-width:810px; margin:0 auto; }
+    .eyebrow { color:var(--accent); font-weight:750; font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; }
+    h1 { font-family: Georgia, "Noto Serif KR", serif; font-size:clamp(2.5rem,5vw,4.55rem); line-height:1.08; letter-spacing:-.055em; margin:10px 0 18px; font-weight:700; }
+    .lead { font-size:1.18rem; line-height:1.75; color:var(--muted); max-width:680px; margin:0 0 34px; }
+    .meta { display:flex; flex-wrap:wrap; gap:8px 18px; padding:15px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); color:var(--muted); font-size:.82rem; }
+    .prose { padding-top:30px; font-family: Georgia, "Noto Serif KR", serif; font-size:1.07rem; }
+    .prose h2 { font-size:1.55rem; margin:42px 0 12px; letter-spacing:-.025em; }
+    .prose p { margin:0 0 20px; }
+    .concept {
+      appearance:none; border:0; padding:0 2px; margin:0; background:linear-gradient(transparent 68%, color-mix(in srgb,var(--mark) 58%,transparent) 0);
+      color:var(--accent-ink); font-family:inherit; font-size:inherit; font-weight:700; cursor:help; border-radius:2px;
+    }
+    .concept:hover { background:var(--mark); color:#222; }
+    .callout { margin:30px 0; padding:19px 21px; border-left:3px solid var(--accent); background:var(--accent-soft); border-radius:0 12px 12px 0; font-family:inherit; }
+    .callout strong { display:block; margin-bottom:3px; }
+    footer { border-top:1px solid var(--line); padding:42px clamp(28px,7vw,104px); display:grid; grid-template-columns:1.4fr 1fr 1fr; gap:32px; color:var(--muted); }
+    footer h3 { color:var(--text); font-size:.82rem; margin:0 0 10px; }
+    footer p, footer a { font-size:.8rem; }
+    footer a { display:block; color:var(--muted); text-decoration:none; margin:5px 0; }
+    footer a:hover { color:var(--accent); }
+    .hover-tip { position:fixed; z-index:80; width:min(310px,calc(100vw - 24px)); padding:13px 15px; border-radius:11px; background:var(--surface-solid); border:1px solid var(--line); box-shadow:var(--shadow); pointer-events:none; opacity:0; transform:translateY(4px); transition:.12s ease; }
+    .hover-tip.show { opacity:1; transform:translateY(0); }
+    .hover-tip strong { display:block; margin-bottom:2px; font-size:.88rem; }
+    .hover-tip span { color:var(--muted); font-size:.78rem; line-height:1.5; }
+    .tooltip-layer { position:fixed; inset:var(--header-h) 0 0 0; z-index:70; pointer-events:none; overflow:hidden; }
+    .concept-card { position:absolute; width:340px; max-height:min(480px,calc(100vh - 100px)); overflow:auto; pointer-events:auto; background:var(--surface-solid); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); animation:card-in .18s ease-out; }
+    @keyframes card-in { from { opacity:0; transform:translateY(8px) scale(.98); } }
+    .card-handle { position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; height:43px; padding:0 9px 0 15px; background:color-mix(in srgb,var(--surface-solid) 94%,transparent); backdrop-filter:blur(12px); border-bottom:1px solid var(--line); cursor:grab; user-select:none; }
+    .card-handle:active { cursor:grabbing; }
+    .drag-dots { color:var(--muted); font-size:1rem; letter-spacing:2px; }
+    .card-close { border:0; background:transparent; width:29px; height:29px; border-radius:8px; color:var(--muted); }
+    .card-close:hover { background:var(--surface-2); color:var(--text); }
+    .card-body { padding:20px; }
+    .card-kicker { color:var(--accent); font-size:.7rem; text-transform:uppercase; letter-spacing:.09em; font-weight:800; }
+    .card-body h3 { font-family:Georgia,"Noto Serif KR",serif; font-size:1.4rem; margin:3px 0 8px; }
+    .card-body p { color:var(--muted); font-size:.87rem; line-height:1.67; margin:0 0 15px; }
+    .card-body .concept { font-family:inherit; font-size:.87rem; }
+    .open-doc { width:100%; border:1px solid var(--line); border-radius:9px; padding:8px 10px; background:var(--surface-2); color:var(--text); font-size:.8rem; font-weight:700; }
+    .open-doc:hover { border-color:var(--accent); }
+    .trail { position:fixed; z-index:75; left:calc(var(--sidebar-w) + 18px); bottom:18px; display:none; align-items:center; gap:5px; padding:8px 10px; border:1px solid var(--line); border-radius:12px; background:var(--surface); box-shadow:var(--shadow); backdrop-filter:blur(14px); font-size:.75rem; }
+    .trail.show { display:flex; }
+    .trail button { border:0; background:transparent; color:var(--accent); padding:3px 5px; border-radius:5px; }
+    .trail button:hover { background:var(--accent-soft); }
+    .search-modal { position:fixed; inset:0; z-index:100; display:none; align-items:flex-start; justify-content:center; padding-top:min(14vh,120px); background:rgba(12,17,14,.48); backdrop-filter:blur(5px); }
+    .search-modal.open { display:flex; }
+    .search-panel { width:min(650px,calc(100vw - 28px)); max-height:min(650px,78vh); overflow:auto; background:var(--surface-solid); border:1px solid var(--line); border-radius:18px; box-shadow:0 30px 90px rgba(0,0,0,.32); }
+    .search-box { display:flex; align-items:center; gap:10px; padding:15px 17px; border-bottom:1px solid var(--line); }
+    .search-box input { width:100%; border:0; outline:0; background:transparent; font-size:1rem; }
+    .search-box kbd { white-space:nowrap; color:var(--muted); font-size:.7rem; }
+    .search-content { padding:13px; }
+    .search-label { display:flex; align-items:center; justify-content:space-between; padding:4px 9px 8px; color:var(--muted); font-size:.74rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+    .search-results { display:grid; gap:3px; }
+    .search-result { border:0; background:transparent; text-align:left; padding:11px 12px; border-radius:10px; display:grid; grid-template-columns:1fr auto; gap:10px; }
+    .search-result:hover, .search-result.active { background:var(--surface-2); }
+    .search-result strong { font-size:.9rem; }
+    .search-result span { grid-column:1/-1; color:var(--muted); font-size:.77rem; margin-top:-7px; }
+    .search-result small { color:var(--muted); font-size:.7rem; }
+    .empty { padding:32px 12px; text-align:center; color:var(--muted); font-size:.86rem; }
+    .mobile-menu { display:none; }
+    @media (max-width: 820px) {
+      :root { --header-h:64px; }
+      .topbar { grid-template-columns:auto 1fr auto; padding:0 15px; gap:10px; }
+      .brand span { display:none; }
+      .search-trigger kbd { display:none; }
+      .mobile-menu { display:grid; }
+      .layout { display:block; }
+      .sidebar { display:none; position:fixed; z-index:60; left:0; top:var(--header-h); width:min(310px,86vw); background:var(--bg); box-shadow:var(--shadow); }
+      .sidebar.open { display:block; }
+      .main { padding:38px 22px 72px; }
+      h1 { font-size:2.65rem; }
+      footer { grid-template-columns:1fr 1fr; padding:34px 22px; }
+      footer > div:first-child { grid-column:1/-1; }
+      .concept-card { width:min(340px,calc(100vw - 24px)); }
+      .trail { left:12px; max-width:calc(100vw - 24px); overflow:auto; }
+    }
+    @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation:none!important; transition:none!important; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="갈피 홈"><i class="brand-mark" aria-hidden="true"></i><span>갈피</span></a>
+    <button class="search-trigger" id="searchTrigger" type="button" aria-haspopup="dialog"><span aria-hidden="true">⌕</span><span>문서와 개념 검색</span><kbd>⌘ K</kbd></button>
+    <div class="top-actions">
+      <button class="icon-btn mobile-menu" id="menuButton" type="button" aria-label="최근 문서 열기">☰</button>
+      <button class="icon-btn" id="themeButton" type="button" aria-label="다크 모드로 전환">◐</button>
+    </div>
+  </header>
+
+  <div class="layout" id="top">
+    <aside class="sidebar" id="sidebar">
+      <div class="side-head"><h2>최근 본 문서</h2><button class="text-btn" id="editRecent" type="button">편집</button></div>
+      <ul class="recent-list" id="recentList"></ul>
+      <p class="side-note">문서를 열면 이 목록에 자동으로 기록됩니다. 편집 모드에서 항목을 지울 수 있어요.</p>
+    </aside>
+
+    <main class="main">
+      <article class="article">
+        <div class="eyebrow">지식 설계 · 6분 읽기</div>
+        <h1>생각을 연결하는<br>두 번째 기억</h1>
+        <p class="lead">개인 위키는 정보를 보관하는 서랍이 아니라, 서로 다른 생각이 다시 만나는 장소다. 표시된 개념에 마우스를 올리거나 클릭해 탐색해보자.</p>
+        <div class="meta"><span>마지막 수정 2026. 9. 14.</span><span>개념 8개</span><span>연결 문서 12개</span></div>
+        <div class="prose">
+          <p>메모는 대개 작성한 시간순으로 쌓이지만, 지식은 순서대로 움직이지 않는다. 하나의 생각은 다른 생각을 부르고, 뜻밖의 관계에서 새로운 질문이 생긴다. 그래서 이 위키는 문서를 떠나는 대신 <button class="concept" data-term="context">문맥</button> 안에서 개념을 펼치는 방식을 택한다.</p>
+          <p>핵심 상호작용은 <button class="concept" data-term="nested">중첩 툴팁</button>이다. 표시된 단어에 마우스를 올리면 짧은 정의를 확인하고, 클릭하면 카드를 고정할 수 있다. 고정된 카드 속 <button class="concept" data-term="backlink">백링크</button>나 <button class="concept" data-term="graph">지식 그래프</button> 같은 개념도 다시 열 수 있다.</p>
+          <div class="callout"><strong>직접 해보기</strong>노란 밑줄이 있는 개념을 클릭한 뒤, 열린 카드를 상단 손잡이로 드래그해보세요. 카드는 화면 밖으로 빠져나가지 않습니다.</div>
+          <h2>왜 문서를 떠나지 않는가</h2>
+          <p>일반적인 하이퍼링크는 새로운 문서를 열어 현재 읽던 위치를 끊는다. 반면 이 방식은 필요한 만큼만 정보를 가져오므로 <button class="concept" data-term="cognitive">인지 부하</button>를 줄이고 읽기의 흐름을 보존한다. 더 깊은 설명이 필요할 때만 전체 문서를 연다.</p>
+          <p>모든 단어가 링크가 될 필요는 없다. 반복해서 설명할 가치가 있는 <button class="concept" data-term="canonical">정규 개념</button>만 연결하고, 한 문서 안에서는 첫 등장이나 중요한 맥락에만 표시한다. 이것이 화면의 소음을 줄이는 가장 좋은 정책이다.</p>
+          <h2>쌓되, 길을 잃지 않도록</h2>
+          <p>고정 카드는 세 개까지만 화면에 남는다. 네 번째 카드를 열면 가장 오래된 카드는 아래의 탐색 경로로 접힌다. 이 제한은 탐색의 깊이를 막는 것이 아니라 <button class="concept" data-term="working-memory">작업 기억</button>에 맞춰 동시에 보이는 정보를 정돈한다.</p>
+        </div>
+      </article>
+    </main>
+  </div>
+
+  <footer>
+    <div><div class="brand"><i class="brand-mark" aria-hidden="true"></i><span>갈피</span></div><p>내 생각 사이에 갈피를 꽂는 개인 지식 공간.</p></div>
+    <div><h3>사이트맵</h3><a href="#top">홈</a><a href="#top">모든 문서</a><a href="#top">태그</a><a href="#top">연결 지도</a></div>
+    <div><h3>도구</h3><a href="#top">새 문서</a><a href="#top">데이터 내보내기</a><a href="#top">설정</a><a href="#top">도움말</a></div>
+  </footer>
+
+  <div class="hover-tip" id="hoverTip" role="tooltip" aria-hidden="true"><strong></strong><span></span></div>
+  <div class="tooltip-layer" id="tooltipLayer" aria-live="polite"></div>
+  <nav class="trail" id="trail" aria-label="접힌 탐색 경로"><span>탐색:</span></nav>
+
+  <div class="search-modal" id="searchModal" role="dialog" aria-modal="true" aria-label="문서 검색">
+    <div class="search-panel">
+      <div class="search-box"><span aria-hidden="true">⌕</span><input id="searchInput" autocomplete="off" placeholder="검색어를 입력하세요" aria-label="검색어"><kbd>ESC 닫기</kbd></div>
+      <div class="search-content"><div class="search-label"><span id="searchLabel">최근 검색어</span><button class="text-btn" id="clearSearch" type="button">지우기</button></div><div class="search-results" id="searchResults"></div></div>
+    </div>
+  </div>
+
+  <script>
+    const concepts = {
+      context:{title:'문맥',kind:'읽기 개념',short:'어떤 정보가 놓인 상황과 앞뒤 관계.',body:'정보의 의미를 결정하는 주변 조건과 연결 관계. 문맥을 유지하면 새 개념을 확인하는 동안에도 원래 읽던 논지를 잃지 않는다.',links:['cognitive','nested']},
+      nested:{title:'중첩 툴팁',kind:'인터페이스 패턴',short:'툴팁 안의 용어에서 다시 툴팁을 여는 탐색 방식.',body:'현재 화면을 떠나지 않고 관련 개념을 연쇄적으로 확인하는 인터페이스다. 고정된 카드 안에서 {{popover}}와 {{context}}를 이어서 탐색할 수 있다.',links:['popover','context']},
+      popover:{title:'인터랙티브 팝오버',kind:'UI 컴포넌트',short:'링크나 버튼을 포함해 조작할 수 있는 비모달 정보 카드.',body:'단순 툴팁과 달리 포커스, 클릭, 스크롤을 받을 수 있다. 이 위키에서는 클릭해 고정한 개념 카드를 의미하며 {{accessibility}} 정책을 따른다.',links:['accessibility']},
+      backlink:{title:'백링크',kind:'위키 구조',short:'현재 문서를 참조하는 다른 문서의 링크.',body:'나가는 링크가 “어디로 가는가”를 말한다면 백링크는 “어디에서 왔는가”를 보여준다. 문서 사이의 양방향 탐색과 {{graph}} 구성에 유용하다.',links:['graph']},
+      graph:{title:'지식 그래프',kind:'지식 구조',short:'개념과 문서를 노드와 관계로 표현한 구조.',body:'문서나 개념을 노드로, 링크를 간선으로 표현한다. 시각화 자체보다 연결을 검색하고 관련 문서를 발견하는 데 가치가 있다.',links:['backlink','canonical']},
+      cognitive:{title:'인지 부하',kind:'인지과학',short:'정보를 처리할 때 작업 기억에 가해지는 부담.',body:'동시에 비교해야 하는 정보가 많거나 탐색 경로가 복잡할수록 커진다. 화면에 보이는 카드 수를 제한하고 {{working-memory}}를 고려하면 부담을 낮출 수 있다.',links:['working-memory']},
+      canonical:{title:'정규 개념',kind:'데이터 모델',short:'여러 표현을 하나로 모으는 대표 개념 레코드.',body:'동의어와 표기 변형을 하나의 대표 항목에 연결한다. 예를 들어 “DB”와 “데이터베이스”가 같은 개념을 가리키도록 관리할 수 있다.',links:['graph']},
+      'working-memory':{title:'작업 기억',kind:'인지과학',short:'현재 과제를 수행하는 동안 정보를 잠시 유지하는 능력.',body:'용량이 제한되어 있으므로 동시에 펼쳐진 카드가 많으면 비교와 이해가 어려워진다. 그래서 화면에는 최근 카드 세 개만 유지한다.',links:['cognitive']},
+      accessibility:{title:'접근성',kind:'설계 원칙',short:'다양한 조건의 사용자가 동등하게 이용할 수 있게 하는 설계.',body:'마우스 호버뿐 아니라 키보드 포커스, 클릭, Escape 닫기를 지원한다. 상호작용 가능한 카드는 tooltip이 아닌 dialog에 가까운 동작을 해야 한다.',links:['popover']}
+    };
+    const docs=[
+      {title:'생각을 연결하는 두 번째 기억',type:'문서',desc:'개인 위키의 중첩 탐색 원칙'},
+      ...Object.values(concepts).map(x=>({title:x.title,type:x.kind,desc:x.short}))
+    ];
+    const defaultRecent=[
+      {title:'생각을 연결하는 두 번째 기억',time:'방금 전'},
+      {title:'지식 그래프',time:'어제'},
+      {title:'백링크',time:'3일 전'},
+      {title:'읽기 인터페이스 원칙',time:'지난주'}
+    ];
+    let recent=JSON.parse(localStorage.getItem('galpi-recent')||'null')||defaultRecent;
+    let recentSearch=JSON.parse(localStorage.getItem('galpi-search')||'null')||['중첩 툴팁','지식 그래프','백링크'];
+    let pinned=[]; let folded=[]; let editing=false; let hoverTimer;
+    const $=s=>document.querySelector(s); const $$=s=>[...document.querySelectorAll(s)];
+
+    function renderRecent(){
+      $('#recentList').innerHTML=recent.length?recent.map((item,i)=>`<li class="recent-item"><button class="recent-link" data-doc="${item.title}"><strong>${item.title}</strong><span>${item.time}</span></button><button class="remove-recent" data-remove="${i}" aria-label="${item.title} 삭제">×</button></li>`).join(''):'<li class="empty">최근에 본 문서가 없습니다.</li>';
+    }
+    function saveRecent(){localStorage.setItem('galpi-recent',JSON.stringify(recent));renderRecent();}
+    function addRecent(title){recent=[{title,time:'방금 전'},...recent.filter(x=>x.title!==title)].slice(0,8);saveRecent();}
+    $('#editRecent').onclick=()=>{editing=!editing;$('#sidebar').classList.toggle('editing',editing);$('#editRecent').textContent=editing?'완료':'편집';};
+    $('#recentList').onclick=e=>{
+      const rem=e.target.closest('[data-remove]'); if(rem){recent.splice(+rem.dataset.remove,1);saveRecent();return;}
+      const doc=e.target.closest('[data-doc]'); if(doc){addRecent(doc.dataset.doc); const found=Object.entries(concepts).find(([,x])=>x.title===doc.dataset.doc); if(found) pinConcept(found[0],{x:330,y:100}); if(innerWidth<821) $('#sidebar').classList.remove('open');}
+    };
+
+    const hoverTip=$('#hoverTip');
+    function positionHover(rect){const w=310,h=92,gap=10;let x=Math.min(rect.left,innerWidth-w-12);x=Math.max(12,x);let y=rect.bottom+gap;if(y+h>innerHeight)y=rect.top-h-gap;hoverTip.style.left=x+'px';hoverTip.style.top=Math.max(12,y)+'px';}
+    function showHover(el){const c=concepts[el.dataset.term];if(!c)return;hoverTip.querySelector('strong').textContent=c.title;hoverTip.querySelector('span').textContent=c.short;positionHover(el.getBoundingClientRect());hoverTip.setAttribute('aria-hidden','false');hoverTip.classList.add('show');}
+    function hideHover(){hoverTip.classList.remove('show');hoverTip.setAttribute('aria-hidden','true');}
+    document.addEventListener('pointerover',e=>{const el=e.target.closest('.concept');if(!el||e.pointerType==='touch')return;clearTimeout(hoverTimer);hoverTimer=setTimeout(()=>showHover(el),220);});
+    document.addEventListener('pointerout',e=>{if(e.target.closest('.concept')){clearTimeout(hoverTimer);hideHover();}});
+    document.addEventListener('focusin',e=>{const el=e.target.closest('.concept');if(el)showHover(el);});
+    document.addEventListener('focusout',e=>{if(e.target.closest('.concept'))hideHover();});
+    document.addEventListener('click',e=>{const el=e.target.closest('.concept');if(el){hideHover();const r=el.getBoundingClientRect();pinConcept(el.dataset.term,{x:r.right+14,y:r.top-72});}});
+
+    function richText(text){return text.replace(/{{([^}]+)}}/g,(_,id)=>`<button class="concept" data-term="${id}">${concepts[id].title}</button>`);}
+    function pinConcept(id,pos){
+      const existing=pinned.find(x=>x.id===id);if(existing){existing.el.style.zIndex=90+Date.now()%100;existing.el.animate([{transform:'scale(1)'},{transform:'scale(1.025)'},{transform:'scale(1)'}],{duration:220});return;}
+      if(pinned.length===3){const old=pinned.shift();folded.push(old.id);old.el.remove();renderTrail();}
+      const c=concepts[id];const card=document.createElement('section');card.className='concept-card';card.dataset.id=id;card.setAttribute('role','dialog');card.setAttribute('aria-label',c.title+' 개념 카드');
+      card.innerHTML=`<div class="card-handle"><span class="drag-dots">⠿ <small>드래그하여 이동</small></span><button class="card-close" aria-label="닫기">×</button></div><div class="card-body"><div class="card-kicker">${c.kind}</div><h3>${c.title}</h3><p>${richText(c.body)}</p><button class="open-doc" data-open-doc="${c.title}">전체 문서 열기 ↗</button></div>`;
+      $('#tooltipLayer').append(card);
+      const idx=pinned.length;const maxX=innerWidth-card.offsetWidth-12;const maxY=innerHeight-$('#tooltipLayer').getBoundingClientRect().top-card.offsetHeight-12;
+      const baseX=innerWidth<821?12:Math.max(290,Math.min(pos.x+idx*24,maxX));const baseY=Math.max(12,Math.min(pos.y+idx*24,maxY));
+      card.style.left=Math.max(12,baseX)+'px';card.style.top=baseY+'px';pinned.push({id,el:card});addRecent(c.title);makeDraggable(card);
+      card.querySelector('.card-close').onclick=()=>closeCard(id);
+      card.querySelector('[data-open-doc]').onclick=()=>{addRecent(c.title);alert(`“${c.title}” 전체 문서를 여는 자리입니다. 현재는 인터랙션 샘플이에요.`);};
+    }
+    function closeCard(id){const i=pinned.findIndex(x=>x.id===id);if(i>-1){pinned[i].el.remove();pinned.splice(i,1);}}
+    function makeDraggable(card){
+      const handle=card.querySelector('.card-handle');let drag=null;
+      handle.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;const r=card.getBoundingClientRect();drag={dx:e.clientX-r.left,dy:e.clientY-r.top};handle.setPointerCapture(e.pointerId);card.style.zIndex=100;});
+      handle.addEventListener('pointermove',e=>{if(!drag)return;const layer=$('#tooltipLayer').getBoundingClientRect();const maxX=innerWidth-card.offsetWidth-8,maxY=layer.height-card.offsetHeight-8;card.style.left=Math.max(8,Math.min(e.clientX-drag.dx,maxX))+'px';card.style.top=Math.max(8,Math.min(e.clientY-layer.top-drag.dy,maxY))+'px';});
+      handle.addEventListener('pointerup',()=>{drag=null;});
+    }
+    function renderTrail(){const el=$('#trail');el.classList.toggle('show',folded.length>0);el.innerHTML='<span>탐색:</span>'+folded.map((id,i)=>`<button data-fold="${i}">${concepts[id].title}</button><span>›</span>`).join('');}
+    $('#trail').onclick=e=>{const b=e.target.closest('[data-fold]');if(b){const id=folded.splice(+b.dataset.fold,1)[0];renderTrail();pinConcept(id,{x:300,y:innerHeight-450});}};
+
+    function renderSearch(q=''){
+      const query=q.trim().toLowerCase();$('#searchLabel').textContent=query?'검색 결과':'최근 검색어';$('#clearSearch').style.display=query?'none':'block';
+      const items=query?docs.filter(x=>(x.title+' '+x.desc).toLowerCase().includes(query)):recentSearch.map(s=>({title:s,type:'최근 검색',desc:'다시 검색하기'}));
+      $('#searchResults').innerHTML=items.length?items.map(x=>`<button class="search-result" data-search="${x.title}"><strong>${x.title}</strong><small>${x.type}</small><span>${x.desc}</span></button>`).join(''):'<div class="empty">일치하는 문서나 개념이 없습니다.</div>';
+    }
+    function openSearch(){renderSearch();$('#searchModal').classList.add('open');setTimeout(()=>$('#searchInput').focus(),20);}
+    function closeSearch(){$('#searchModal').classList.remove('open');$('#searchInput').value='';}
+    $('#searchTrigger').onclick=openSearch;$('#searchInput').oninput=e=>renderSearch(e.target.value);
+    $('#searchModal').onclick=e=>{if(e.target===$('#searchModal'))closeSearch();};
+    $('#searchResults').onclick=e=>{const b=e.target.closest('[data-search]');if(!b)return;const title=b.dataset.search;if(b.querySelector('small').textContent==='최근 검색'){ $('#searchInput').value=title;renderSearch(title);return;} recentSearch=[title,...recentSearch.filter(x=>x!==title)].slice(0,6);localStorage.setItem('galpi-search',JSON.stringify(recentSearch));addRecent(title);const found=Object.entries(concepts).find(([,x])=>x.title===title);closeSearch();if(found)pinConcept(found[0],{x:innerWidth/2-170,y:80});};
+    $('#clearSearch').onclick=()=>{recentSearch=[];localStorage.setItem('galpi-search','[]');renderSearch();};
+    document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openSearch();}if(e.key==='Escape'){if($('#searchModal').classList.contains('open'))closeSearch();else if(pinned.length)closeCard(pinned[pinned.length-1].id);}});
+
+    const storedTheme=localStorage.getItem('galpi-theme');if(storedTheme)document.documentElement.dataset.theme=storedTheme;else if(matchMedia('(prefers-color-scheme:dark)').matches)document.documentElement.dataset.theme='dark';
+    function syncThemeLabel(){$('#themeButton').setAttribute('aria-label',document.documentElement.dataset.theme==='dark'?'라이트 모드로 전환':'다크 모드로 전환');}
+    $('#themeButton').onclick=()=>{const next=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=next;localStorage.setItem('galpi-theme',next);syncThemeLabel();};syncThemeLabel();
+    $('#menuButton').onclick=()=>$('#sidebar').classList.toggle('open');
+    addEventListener('resize',()=>{pinned.forEach(({el})=>{const r=el.getBoundingClientRect();el.style.left=Math.max(8,Math.min(r.left,innerWidth-el.offsetWidth-8))+'px';el.style.top=Math.max(8,Math.min(parseFloat(el.style.top),innerHeight-72-el.offsetHeight-8))+'px';});});
+    renderRecent();
+  </script>
+</body>
+</html>
