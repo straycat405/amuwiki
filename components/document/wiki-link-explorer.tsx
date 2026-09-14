@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import { MarkdownRenderer } from "@/components/document/markdown-renderer";
+import { usePreferences } from "@/components/preferences/preferences-provider";
 import type { WikiLinkResolutions } from "@/lib/markdown/wiki-links";
 
 type PreviewDocument = {
@@ -33,7 +34,6 @@ type WikiLinkExplorerProps = {
   wikiLinkResolutions: WikiLinkResolutions;
 };
 
-const HOVER_DELAY_MS = 350;
 const CLOSE_DELAY_MS = 150;
 const CARD_WIDTH = 360;
 const CARD_OFFSET = 16;
@@ -63,6 +63,7 @@ export function WikiLinkExplorer({
   markdown,
   wikiLinkResolutions,
 }: WikiLinkExplorerProps) {
+  const { preferences } = usePreferences();
   const [hoveredCard, setHoveredCard] = useState<PreviewCard | null>(null);
   const [pinnedCards, setPinnedCards] = useState<PreviewCard[]>([]);
   const [notice, setNotice] = useState("");
@@ -116,9 +117,9 @@ export function WikiLinkExplorer({
       hoveredSlug.current = slug;
       hoverTimer.current = window.setTimeout(() => {
         void showPreview(slug, position);
-      }, HOVER_DELAY_MS);
+      }, preferences.tooltipDelayMs);
     },
-    [clearCloseTimer, clearHoverTimer, showPreview],
+    [clearCloseTimer, clearHoverTimer, preferences.tooltipDelayMs, showPreview],
   );
 
   const closePreview = useCallback(() => {
@@ -163,6 +164,7 @@ export function WikiLinkExplorer({
   );
 
   const handlePointerOver = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!preferences.tooltipEnabled) return;
     const slug = linkSlug(event.target);
     if (!slug) return;
     schedulePreview(slug, cardPosition(event.clientX, event.clientY));

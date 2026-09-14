@@ -11,6 +11,23 @@
   --header-height: 64px;
   --sidebar-width: 280px;
   --content-width: 744px;
+  --font-scale: 1;
   --shadow-sm: 0 1px 2px rgb(23 33 28 / 5%), 0 5px 18px rgb(23 33 28 / 6%);
   --shadow-card: 0 20px 55px rgb(23 33 28 / 16%), 0 3px 12px rgb(23 33 28 / 8%);
+}
+
+:root[data-width="narrow"] {
+  --content-width: 620px;
+}
+
+:root[data-width="wide"] {
+  --content-width: 900px;
+}
+
+:root[data-scale="small"] {
+  --font-scale: 0.9;
+}
+
+:root[data-scale="large"] {
+  --font-scale: 1.15;
 }

@@ -26,9 +26,9 @@ export function AppHeader() {
         >
           <Plus size={20} aria-hidden="true" />
         </Link>
-        <button className="icon-button" type="button" aria-label="설정">
+        <Link className="icon-button" href="/settings" aria-label="설정">
           <Settings size={19} aria-hidden="true" />
-        </button>
+        </Link>
         <form action={signOut}>
           <button className="icon-button" type="submit" aria-label="로그아웃">
             <LogOut size={19} aria-hidden="true" />

@@ -27,6 +27,8 @@ const appearanceScript = `
     const root = document.documentElement;
     if (value?.theme) root.dataset.theme = value.theme;
     if (value?.font) root.dataset.font = value.font;
+    if (value?.fontScale) root.dataset.scale = value.fontScale;
+    if (value?.contentWidth) root.dataset.width = value.contentWidth;
     if (value?.mode && value.mode !== "system") root.dataset.mode = value.mode;
   } catch {}
 })();`;
@@ -37,6 +39,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       lang="ko"
       data-theme="paper-green"
       data-font="pretendard"
+      data-scale="normal"
+      data-width="normal"
       suppressHydrationWarning
     >
       <body>

@@ -1,7 +1,11 @@
+"use client";
+
 import type { ComponentProps } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type { PluggableList } from "unified";
 
+import { usePreferences } from "@/components/preferences/preferences-provider";
 import {
   remarkWikiLinks,
   type WikiLinkResolutions,
@@ -32,15 +36,19 @@ export function MarkdownRenderer({
   markdown,
   wikiLinkResolutions,
 }: MarkdownRendererProps) {
+  const { preferences } = usePreferences();
+
+  const remarkPlugins: PluggableList = [
+    remarkGfm,
+    [remarkWikiLinks, wikiLinkResolutions],
+  ];
+  if (preferences.lineBreakMode === "hard") remarkPlugins.push(remarkLineBreaks);
+
   return (
     <div className="markdown-body">
       <ReactMarkdown
         components={{ a: SafeLink }}
-        remarkPlugins={[
-          remarkGfm,
-          [remarkWikiLinks, wikiLinkResolutions],
-          remarkLineBreaks,
-        ]}
+        remarkPlugins={remarkPlugins}
         urlTransform={defaultUrlTransform}
       >
         {markdown}
