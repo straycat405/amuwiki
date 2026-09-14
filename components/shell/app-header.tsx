@@ -19,9 +19,13 @@ export function AppHeader() {
         <kbd>⌘ K</kbd>
       </button>
       <div className="header-actions">
-        <button className="icon-button" type="button" aria-label="새 문서">
+        <Link
+          className="icon-button"
+          href="/documents/new"
+          aria-label="새 문서"
+        >
           <Plus size={20} aria-hidden="true" />
-        </button>
+        </Link>
         <button className="icon-button" type="button" aria-label="설정">
           <Settings size={19} aria-hidden="true" />
         </button>
