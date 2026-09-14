@@ -37,8 +37,17 @@ export default async function HomePage() {
             {documents.map((document) => (
               <li key={document.id}>
                 <Link href={`/documents/${document.slug}`}>
+                  <span className="document-list__icon" aria-hidden="true">
+                    <FileText size={15} strokeWidth={1.8} />
+                  </span>
                   <strong>{document.title}</strong>
-                  {document.summary ? <span>{document.summary}</span> : null}
+                  {document.summary ? (
+                    <span className="document-list__summary">{document.summary}</span>
+                  ) : (
+                    <span className="document-list__summary document-list__empty">
+                      요약 없음
+                    </span>
+                  )}
                   <time dateTime={document.updated_at}>
                     {new Intl.DateTimeFormat("ko-KR", {
                       dateStyle: "medium",
