@@ -14,7 +14,8 @@ select public.create_document(
   '수명-주기-문서',
   '',
   '# 본문',
-  '{}'::jsonb
+  '{}'::jsonb,
+  '[]'::jsonb
 ) as document_id \gset
 
 select public.archive_document(:'document_id', 1);

@@ -2,10 +2,14 @@ import type { ComponentProps } from "react";
 import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import { remarkWikiLinks } from "@/lib/markdown/wiki-links";
+import {
+  remarkWikiLinks,
+  type WikiLinkResolutions,
+} from "@/lib/markdown/wiki-links";
 
 type MarkdownRendererProps = {
   markdown: string;
+  wikiLinkResolutions?: WikiLinkResolutions;
 };
 
 function SafeLink({ href = "", children, ...props }: ComponentProps<"a">) {
@@ -23,12 +27,15 @@ function SafeLink({ href = "", children, ...props }: ComponentProps<"a">) {
   );
 }
 
-export function MarkdownRenderer({ markdown }: MarkdownRendererProps) {
+export function MarkdownRenderer({
+  markdown,
+  wikiLinkResolutions,
+}: MarkdownRendererProps) {
   return (
     <div className="markdown-body">
       <ReactMarkdown
         components={{ a: SafeLink }}
-        remarkPlugins={[remarkGfm, remarkWikiLinks]}
+        remarkPlugins={[remarkGfm, [remarkWikiLinks, wikiLinkResolutions]]}
         urlTransform={defaultUrlTransform}
       >
         {markdown}

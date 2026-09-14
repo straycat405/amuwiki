@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { MarkdownRenderer } from "@/components/document/markdown-renderer";
 import { normalizeConcept, slugifyDocumentTitle } from "@/lib/markdown/slug";
+import { extractWikiLinkTargets } from "@/lib/markdown/wiki-links";
 
 describe("MarkdownRenderer", () => {
   it("renders wiki links with aliases and headings", () => {
@@ -37,6 +38,29 @@ describe("MarkdownRenderer", () => {
       "rel",
       "noopener noreferrer",
     );
+  });
+
+  it("marks unresolved links when resolutions are available", () => {
+    render(
+      <MarkdownRenderer
+        markdown="[[없는 문서]]"
+        wikiLinkResolutions={{}}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "없는 문서" })).toHaveAttribute(
+      "data-wiki-status",
+      "missing",
+    );
+  });
+});
+
+describe("wiki link extraction", () => {
+  it("extracts normalized targets and their original positions", () => {
+    expect(extractWikiLinkTargets("[[문명 6|문명]] 그리고 [[React#상태]]")).toEqual([
+      { normalizedTitle: "문명 6", firstPosition: 0 },
+      { normalizedTitle: "react", firstPosition: 16 },
+    ]);
   });
 });
 

@@ -47,7 +47,8 @@ function writeError(
 ) {
   if (reason === "conflict")
     return "다른 곳에서 문서가 변경되었습니다. 새로고침 후 다시 저장해주세요.";
-  if (reason === "duplicate") return "같은 제목의 문서가 이미 있습니다.";
+  if (reason === "duplicate")
+    return "같은 제목 또는 별칭을 사용하는 문서가 이미 있습니다.";
   if (reason === "not-found") return "문서를 찾을 수 없습니다.";
   return "문서를 저장하지 못했습니다. 잠시 후 다시 시도해주세요.";
 }

@@ -14,7 +14,8 @@ select public.create_document(
   '첫-문서',
   '요약',
   '# 첫 문서',
-  '{}'::jsonb
+  '{}'::jsonb,
+  '[]'::jsonb
 ) as document_id \gset
 
 do $$
@@ -37,7 +38,8 @@ select public.update_document(
   '첫 문서 수정',
   '새 요약',
   '# 수정됨',
-  '{}'::jsonb
+  '{}'::jsonb,
+  '[]'::jsonb
 );
 
 do $$
@@ -64,7 +66,7 @@ begin
 
   begin
     perform public.update_document(
-      tested_document_id, 1, '충돌', '충돌', '', '', '{}'::jsonb
+      tested_document_id, 1, '충돌', '충돌', '', '', '{}'::jsonb, '[]'::jsonb
     );
     raise exception 'stale update unexpectedly succeeded';
   exception

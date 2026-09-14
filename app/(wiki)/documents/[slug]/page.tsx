@@ -5,7 +5,11 @@ import { notFound } from "next/navigation";
 import { archiveDocumentAction } from "@/app/(wiki)/documents/actions";
 import { DocumentLifecycleButton } from "@/components/document/document-lifecycle-button";
 import { MarkdownRenderer } from "@/components/document/markdown-renderer";
-import { getDocumentBySlug } from "@/features/documents/data";
+import {
+  getDocumentBySlug,
+  listBacklinks,
+  resolveWikiLinkTargets,
+} from "@/features/documents/data";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { createClient } from "@/lib/supabase/server";
 
@@ -17,6 +21,10 @@ export default async function DocumentPage({
   const supabase = await createClient();
   const document = await getDocumentBySlug(supabase, user.id, slug);
   if (!document) notFound();
+  const [wikiLinkResolutions, backlinks] = await Promise.all([
+    resolveWikiLinkTargets(supabase, user.id, document.body_markdown),
+    listBacklinks(supabase, user.id, document.id),
+  ]);
 
   return (
     <main className="document-stage document-stage--reading" id="main-content">
@@ -44,7 +52,24 @@ export default async function DocumentPage({
             />
           </div>
         </header>
-        <MarkdownRenderer markdown={document.body_markdown} />
+        <MarkdownRenderer
+          markdown={document.body_markdown}
+          wikiLinkResolutions={wikiLinkResolutions}
+        />
+        {backlinks.length > 0 ? (
+          <section className="backlinks" aria-labelledby="backlinks-title">
+            <h2 id="backlinks-title">연결된 문서</h2>
+            <ul>
+              {backlinks.map((backlink) => (
+                <li key={backlink.slug}>
+                  <Link href={`/documents/${backlink.slug}`}>{backlink.title}</Link>
+                  {backlink.summary ? <p>{backlink.summary}</p> : null}
+                  <span>{backlink.occurrenceCount}회 언급</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </article>
     </main>
   );

@@ -18,3 +18,10 @@ export type DeletedDocumentListItem = DocumentListItem & {
   deleted_at: string;
   version: number;
 };
+
+export type Backlink = {
+  slug: string;
+  title: string;
+  summary: string;
+  occurrenceCount: number;
+};

@@ -1,28 +1,65 @@
 import type { Link, Parent, Root, Text } from "mdast";
 import { visit } from "unist-util-visit";
 
-import { slugifyDocumentTitle, slugifyHeading } from "@/lib/markdown/slug";
+import {
+  normalizeConcept,
+  slugifyDocumentTitle,
+  slugifyHeading,
+} from "@/lib/markdown/slug";
 
 const wikiLinkPattern = /\[\[([^\]|#]+?)(?:#([^\]|]+))?(?:\|([^\]]+))?\]\]/g;
 
-function createWikiLink(target: string, heading: string | undefined, label: string): Link {
-  const slug = slugifyDocumentTitle(target);
+export type WikiLinkTarget = {
+  normalizedTitle: string;
+  firstPosition: number;
+};
+
+export type WikiLinkResolution = {
+  href: string;
+  title: string;
+};
+
+export type WikiLinkResolutions = Record<string, WikiLinkResolution>;
+
+export function extractWikiLinkTargets(markdown: string): WikiLinkTarget[] {
+  return [...markdown.matchAll(wikiLinkPattern)].flatMap((match) => {
+    const target = match[1]?.trim();
+    if (!target || match.index === undefined) return [];
+    return [{ normalizedTitle: normalizeConcept(target), firstPosition: match.index }];
+  });
+}
+
+function createWikiLink(
+  target: string,
+  heading: string | undefined,
+  label: string,
+  resolutions?: WikiLinkResolutions,
+): Link {
+  const resolution = resolutions?.[normalizeConcept(target)];
+  const href = resolution?.href ?? `/documents/${slugifyDocumentTitle(target)}`;
   const hash = heading ? `#${slugifyHeading(heading)}` : "";
 
   return {
     type: "link",
-    url: `/documents/${slug}${hash}`,
+    url: `${href}${hash}`,
     children: [{ type: "text", value: label }],
     data: {
       hProperties: {
-        className: ["concept-link"],
+        className: [
+          "concept-link",
+          ...(resolutions && !resolution ? ["concept-link--missing"] : []),
+        ],
         "data-wiki-target": target.trim(),
+        "data-wiki-status": resolution ? "resolved" : "missing",
       },
     },
   };
 }
 
-function splitWikiLinks(node: Text): Array<Text | Link> {
+function splitWikiLinks(
+  node: Text,
+  resolutions?: WikiLinkResolutions,
+): Array<Text | Link> {
   const result: Array<Text | Link> = [];
   let cursor = 0;
 
@@ -38,7 +75,7 @@ function splitWikiLinks(node: Text): Array<Text | Link> {
 
     const heading = match[2]?.trim();
     const label = match[3]?.trim() || target;
-    result.push(createWikiLink(target, heading, label));
+    result.push(createWikiLink(target, heading, label, resolutions));
     cursor = index + fullMatch.length;
   }
 
@@ -50,12 +87,12 @@ function splitWikiLinks(node: Text): Array<Text | Link> {
   return result;
 }
 
-export function remarkWikiLinks() {
+export function remarkWikiLinks(resolutions?: WikiLinkResolutions) {
   return (tree: Root) => {
     visit(tree, "text", (node: Text, index, parent: Parent | undefined) => {
       if (index === undefined || !parent) return;
 
-      const replacement = splitWikiLinks(node);
+      const replacement = splitWikiLinks(node, resolutions);
       if (replacement.length === 1 && replacement[0] === node) return;
 
       parent.children.splice(index, 1, ...replacement);
