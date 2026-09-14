@@ -10,6 +10,9 @@ coverage/
 playwright-report/
 test-results/
 
+# Supabase local state
+supabase/.temp/
+
 # local configuration
 .env
 .env.local
