@@ -1,11 +1,18 @@
-import { FileUp, Settings } from "lucide-react";
+import { FileUp, ListChecks, Settings } from "lucide-react";
 import Link from "next/link";
 
 import { SettingsForm } from "@/components/settings/settings-form";
+import { refreshSuggestions } from "@/features/lint/data";
+import { requireOwner } from "@/lib/auth/require-owner";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "설정" };
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  await requireOwner();
+  const supabase = await createClient();
+  const pendingCount = await refreshSuggestions(supabase);
+
   return (
     <main className="document-stage document-stage--reading" id="main-content">
       <section className="settings-view" aria-labelledby="settings-title">
@@ -14,6 +21,20 @@ export default function SettingsPage() {
           <h1 id="settings-title">설정</h1>
         </header>
         <SettingsForm />
+        <div className="settings-section">
+          <header className="settings-section__header">
+            <h2>정리</h2>
+            <p>
+              {pendingCount > 0
+                ? `연결할 수 있는 링크, 빈 요약 등 ${pendingCount}건의 제안이 있습니다.`
+                : "정리할 항목이 없습니다."}
+            </p>
+          </header>
+          <Link className="secondary-button" href="/settings/lint">
+            <ListChecks size={16} aria-hidden="true" />
+            정리 열기
+          </Link>
+        </div>
         <div className="settings-section">
           <header className="settings-section__header">
             <h2>Markdown 가져오기</h2>

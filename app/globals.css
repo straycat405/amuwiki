@@ -715,6 +715,75 @@ button {
   font: 450 0.9rem/1.6 var(--font-ui);
 }
 
+.lint-sections {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.lint-empty {
+  margin: 0;
+  color: var(--color-muted);
+  font: 450 0.9rem/1.6 var(--font-ui);
+}
+
+.lint-count {
+  margin-left: var(--space-1);
+  color: var(--color-muted);
+  font-weight: 500;
+}
+
+.lint-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lint-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-3) 0;
+  font: 500 0.88rem/1.5 var(--font-ui);
+}
+
+.lint-item__text {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.lint-item__text p {
+  margin: 0;
+}
+
+.lint-item__text code {
+  font-size: 0.85em;
+}
+
+.lint-item__note {
+  color: var(--color-muted);
+  font-weight: 450;
+}
+
+.lint-proposal {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-subtle);
+  color: var(--color-text);
+  font-weight: 450;
+}
+
+.lint-item__actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-2);
+}
+
 .import-wizard {
   display: grid;
   gap: var(--space-5);
