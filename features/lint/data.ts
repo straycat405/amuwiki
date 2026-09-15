@@ -20,9 +20,10 @@ type SuggestionRow = {
 
 const kindOrder: Record<SuggestionKind, number> = {
   forward_link: 0,
-  fill_summary: 1,
-  broken_link: 2,
-  orphan: 3,
+  ai_summary: 1,
+  fill_summary: 2,
+  broken_link: 3,
+  orphan: 4,
 };
 
 export async function refreshSuggestions(supabase: SupabaseClient): Promise<number> {
@@ -66,7 +67,10 @@ export async function listPendingSuggestions(
     .order("created_at", { ascending: true });
   if (error) throw new Error("정리 제안을 불러오지 못했습니다.");
 
-  const rows = (data ?? []) as unknown as SuggestionRow[];
+  const allRows = (data ?? []) as unknown as SuggestionRow[];
+  // An AI summary supersedes the derived-summary row for the same document.
+  const aiSummarized = new Set(allRows.filter((row) => row.kind === "ai_summary").map((row) => row.document_id));
+  const rows = allRows.filter((row) => row.kind !== "fill_summary" || !aiSummarized.has(row.document_id));
   const summaryTargets = rows.filter((row) => row.kind === "fill_summary").map((row) => row.document_id);
   const proposedSummaries = await deriveSummaries(supabase, ownerId, summaryTargets);
 
@@ -104,20 +108,24 @@ async function deriveSummaries(
   return result;
 }
 
+function normalizeStoredSummary(value: unknown): string {
+  return typeof value === "string" ? value.trim().slice(0, 300) : "";
+}
+
 async function getPendingSuggestion(
   supabase: SupabaseClient,
   ownerId: string,
   suggestionId: string,
-): Promise<{ kind: SuggestionKind; documentId: string } | null> {
+): Promise<{ kind: SuggestionKind; documentId: string; payload: Record<string, unknown> } | null> {
   const { data, error } = await supabase
     .from("document_suggestions")
-    .select("kind, document_id")
+    .select("kind, document_id, payload")
     .eq("owner_id", ownerId)
     .eq("id", suggestionId)
     .eq("status", "pending")
     .maybeSingle();
   if (error) throw new Error("정리 제안을 불러오지 못했습니다.");
-  return data ? { kind: data.kind, documentId: data.document_id } : null;
+  return data ? { kind: data.kind, documentId: data.document_id, payload: data.payload ?? {} } : null;
 }
 
 async function markSuggestion(
@@ -164,8 +172,11 @@ export async function applySuggestion(
     });
     if (error?.code === "P0002") return { ok: false, reason: "not-found" };
     if (error) return { ok: false, reason: "unknown" };
-  } else if (suggestion.kind === "fill_summary") {
-    const summary = deriveSummary(document.body_markdown);
+  } else if (suggestion.kind === "fill_summary" || suggestion.kind === "ai_summary") {
+    const summary =
+      suggestion.kind === "ai_summary"
+        ? normalizeStoredSummary(suggestion.payload.summary)
+        : deriveSummary(document.body_markdown);
     if (!summary) return { ok: false, reason: "empty" };
     const saved = await updateDocument(
       supabase,

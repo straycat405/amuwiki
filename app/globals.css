@@ -848,6 +848,10 @@ button {
   font-weight: 500;
 }
 
+.lint-ai-button {
+  margin-top: var(--space-2);
+}
+
 .lint-list {
   display: grid;
   gap: var(--space-2);

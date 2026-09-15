@@ -2,6 +2,7 @@ import { ListChecks } from "lucide-react";
 
 import { ReindexButton } from "@/components/lint/reindex-button";
 import { SuggestionList } from "@/components/lint/suggestion-list";
+import { getAiSettings } from "@/features/ai/data";
 import { listPendingSuggestions, refreshSuggestions } from "@/features/lint/data";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { createClient } from "@/lib/supabase/server";
@@ -12,7 +13,10 @@ export default async function LintPage() {
   const user = await requireOwner();
   const supabase = await createClient();
   await refreshSuggestions(supabase);
-  const suggestions = await listPendingSuggestions(supabase, user.id);
+  const [suggestions, aiSettings] = await Promise.all([
+    listPendingSuggestions(supabase, user.id),
+    getAiSettings(supabase, user.id),
+  ]);
 
   return (
     <main className="document-stage document-stage--reading" id="main-content">
@@ -26,7 +30,7 @@ export default async function LintPage() {
           항목은 상태가 바뀔 때까지 다시 나타나지 않습니다.
         </p>
         <ReindexButton />
-        <SuggestionList suggestions={suggestions} />
+        <SuggestionList aiEnabled={aiSettings.enabled} suggestions={suggestions} />
       </section>
     </main>
   );

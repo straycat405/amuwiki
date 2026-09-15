@@ -189,6 +189,40 @@ describe("applySuggestion", () => {
     );
   });
 
+  it("saves an AI-generated summary from the suggestion payload", async () => {
+    const { client } = fakeSupabase([
+      { data: { kind: "ai_summary", document_id: "d1", payload: { summary: "  AI 요약  " } }, error: null },
+      { data: [{ id: "s1" }], error: null },
+    ]);
+    documentsData.getDocumentById.mockResolvedValue(document);
+    documentsData.updateDocument.mockResolvedValue({ ok: true, version: 4 });
+
+    await expect(applySuggestion(client, "owner", "s1")).resolves.toEqual({ ok: true });
+    expect(documentsData.updateDocument).toHaveBeenCalledWith(
+      client,
+      "d1",
+      expect.objectContaining({ summary: "AI 요약" }),
+      { tags: ["a"] },
+    );
+  });
+
+  it("hides fill_summary rows for documents that already have an AI summary", async () => {
+    const base = { target_key: "", payload: {}, created_at: "2026-09-15T00:00:00Z", documents: { slug: "s", title: "T" } };
+    const { client } = fakeSupabase([
+      {
+        data: [
+          { ...base, id: "fill", kind: "fill_summary", document_id: "d1" },
+          { ...base, id: "ai", kind: "ai_summary", document_id: "d1", payload: { summary: "x" } },
+          { ...base, id: "fill2", kind: "fill_summary", document_id: "d2" },
+        ],
+        error: null,
+      },
+      { data: [{ id: "d2", body_markdown: "본문." }], error: null },
+    ]);
+    const result = await listPendingSuggestions(client, "owner");
+    expect(result.map((s) => s.id)).toEqual(["ai", "fill2"]);
+  });
+
   it("surfaces version conflicts from the save path", async () => {
     const { client } = fakeSupabase([
       { data: { kind: "fill_summary", document_id: "d1" }, error: null },

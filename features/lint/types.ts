@@ -1,4 +1,4 @@
-export const suggestionKinds = ["orphan", "broken_link", "forward_link", "fill_summary"] as const;
+export const suggestionKinds = ["orphan", "broken_link", "forward_link", "fill_summary", "ai_summary"] as const;
 
 export type SuggestionKind = (typeof suggestionKinds)[number];
 

@@ -2,14 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 
+import { generateSummaries, listSummaryCandidates } from "@/features/ai/summarize";
 import {
   applySuggestion,
   dismissSuggestion,
+  listPendingSuggestions,
   refreshSuggestions,
   reindexAllDocuments,
 } from "@/features/lint/data";
 import type { SuggestionActionResult } from "@/features/lint/types";
 import { requireOwner } from "@/lib/auth/require-owner";
+import { getAiServerEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
 export type LintActionResult = { ok: true } | { ok: false; message: string };
@@ -49,6 +52,27 @@ export async function reindexAllDocumentsAction(): Promise<LintActionResult> {
   }
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+export type SummaryGenerationResult =
+  | { ok: true; generated: number; failed: number; capped: boolean }
+  | { ok: false; message: string };
+
+export async function generateAiSummariesAction(): Promise<SummaryGenerationResult> {
+  const user = await requireOwner();
+  const supabase = await createClient();
+  try {
+    const pending = await listPendingSuggestions(supabase, user.id);
+    const targetIds = pending
+      .filter((item) => item.kind === "fill_summary" && !item.proposedSummary)
+      .map((item) => item.documentId);
+    const candidates = await listSummaryCandidates(supabase, user.id, targetIds);
+    const result = await generateSummaries(supabase, user.id, getAiServerEnv(), candidates);
+    revalidatePath("/settings/lint");
+    return { ok: true, ...result };
+  } catch {
+    return { ok: false, message: "AI 요약을 만들지 못했습니다. 잠시 후 다시 시도해주세요." };
+  }
 }
 
 export async function applySuggestionAction(suggestionId: string): Promise<LintActionResult> {
