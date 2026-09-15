@@ -715,6 +715,24 @@ button {
   font: 450 0.9rem/1.6 var(--font-ui);
 }
 
+.lint-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-6);
+}
+
+.lint-toolbar__hint {
+  color: var(--color-muted);
+  font: 450 0.82rem/1.5 var(--font-ui);
+}
+
+.lint-toolbar .form-message {
+  flex-basis: 100%;
+  margin: 0;
+}
+
 .lint-sections {
   display: grid;
   gap: var(--space-6);

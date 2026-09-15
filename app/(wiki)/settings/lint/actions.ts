@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 
-import { applySuggestion, dismissSuggestion, refreshSuggestions } from "@/features/lint/data";
+import {
+  applySuggestion,
+  dismissSuggestion,
+  refreshSuggestions,
+  reindexAllDocuments,
+} from "@/features/lint/data";
 import type { SuggestionActionResult } from "@/features/lint/types";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { createClient } from "@/lib/supabase/server";
@@ -30,6 +35,19 @@ export async function refreshSuggestionsAction(): Promise<LintActionResult> {
     return { ok: false, message: "정리 제안을 갱신하지 못했습니다." };
   }
   revalidatePath("/settings/lint");
+  return { ok: true };
+}
+
+export async function reindexAllDocumentsAction(): Promise<LintActionResult> {
+  const user = await requireOwner();
+  const supabase = await createClient();
+  try {
+    await reindexAllDocuments(supabase, user.id);
+    await refreshSuggestions(supabase);
+  } catch {
+    return { ok: false, message: "링크를 다시 색인하지 못했습니다. 잠시 후 다시 시도해주세요." };
+  }
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 

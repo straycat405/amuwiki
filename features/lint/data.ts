@@ -31,6 +31,29 @@ export async function refreshSuggestions(supabase: SupabaseClient): Promise<numb
   return data;
 }
 
+/** Re-resolves every active document's wiki links against current titles and aliases. */
+export async function reindexAllDocuments(
+  supabase: SupabaseClient,
+  ownerId: string,
+): Promise<number> {
+  const { data, error } = await supabase
+    .from("documents")
+    .select("id, body_markdown")
+    .eq("owner_id", ownerId)
+    .eq("status", "active")
+    .is("deleted_at", null);
+  if (error) throw new Error("문서를 불러오지 못했습니다.");
+
+  for (const row of data ?? []) {
+    const { error: rpcError } = await supabase.rpc("reindex_document_links", {
+      p_document_id: row.id,
+      p_link_targets: linkTargetsForStorage(row.body_markdown),
+    });
+    if (rpcError) throw new Error("링크를 다시 색인하지 못했습니다.");
+  }
+  return (data ?? []).length;
+}
+
 export async function listPendingSuggestions(
   supabase: SupabaseClient,
   ownerId: string,

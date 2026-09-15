@@ -13,6 +13,7 @@ import {
   dismissSuggestion,
   listPendingSuggestions,
   refreshSuggestions,
+  reindexAllDocuments,
 } from "@/features/lint/data";
 
 type QueryResult = { data: unknown; error: unknown };
@@ -43,6 +44,35 @@ describe("refreshSuggestions", () => {
   it("throws on RPC failure", async () => {
     const { client } = fakeSupabase([], vi.fn().mockResolvedValue({ data: null, error: { code: "42501" } }));
     await expect(refreshSuggestions(client)).rejects.toThrow();
+  });
+});
+
+describe("reindexAllDocuments", () => {
+  it("reindexes each active document and returns the count", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const { client } = fakeSupabase(
+      [{ data: [{ id: "d1", body_markdown: "[[개념]]" }, { id: "d2", body_markdown: "" }], error: null }],
+      rpc,
+    );
+    await expect(reindexAllDocuments(client, "owner")).resolves.toBe(2);
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc).toHaveBeenCalledWith("reindex_document_links", {
+      p_document_id: "d1",
+      p_link_targets: [{ normalized_title: "개념", title: "개념", first_position: 0 }],
+    });
+  });
+
+  it("stops and throws when a reindex call fails", async () => {
+    const rpc = vi
+      .fn()
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: null, error: { code: "P0002" } });
+    const { client } = fakeSupabase(
+      [{ data: [{ id: "d1", body_markdown: "" }, { id: "d2", body_markdown: "" }, { id: "d3", body_markdown: "" }], error: null }],
+      rpc,
+    );
+    await expect(reindexAllDocuments(client, "owner")).rejects.toThrow();
+    expect(rpc).toHaveBeenCalledTimes(2);
   });
 });
 
