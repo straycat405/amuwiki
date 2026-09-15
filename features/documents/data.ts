@@ -20,6 +20,7 @@ type DocumentWriteResult =
 function linkTargetsForStorage(markdown: string) {
   return extractWikiLinkTargets(markdown).map((link) => ({
     normalized_title: link.normalizedTitle,
+    title: link.title,
     first_position: link.firstPosition,
   }));
 }

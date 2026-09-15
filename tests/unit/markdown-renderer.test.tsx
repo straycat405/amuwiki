@@ -82,8 +82,8 @@ describe("MarkdownRenderer", () => {
 describe("wiki link extraction", () => {
   it("extracts normalized targets and their original positions", () => {
     expect(extractWikiLinkTargets("[[문명 6|문명]] 그리고 [[React#상태]]")).toEqual([
-      { normalizedTitle: "문명 6", firstPosition: 0 },
-      { normalizedTitle: "react", firstPosition: 16 },
+      { title: "문명 6", normalizedTitle: "문명 6", firstPosition: 0 },
+      { title: "React", normalizedTitle: "react", firstPosition: 16 },
     ]);
   });
 });

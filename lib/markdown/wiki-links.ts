@@ -10,6 +10,7 @@ import {
 const wikiLinkPattern = /\[\[([^\]|#]+?)(?:#([^\]|]+))?(?:\|([^\]]+))?\]\]/g;
 
 export type WikiLinkTarget = {
+  title: string;
   normalizedTitle: string;
   firstPosition: number;
 };
@@ -25,7 +26,9 @@ export function extractWikiLinkTargets(markdown: string): WikiLinkTarget[] {
   return [...markdown.matchAll(wikiLinkPattern)].flatMap((match) => {
     const target = match[1]?.trim();
     if (!target || match.index === undefined) return [];
-    return [{ normalizedTitle: normalizeConcept(target), firstPosition: match.index }];
+    return [
+      { title: target, normalizedTitle: normalizeConcept(target), firstPosition: match.index },
+    ];
   });
 }
 
