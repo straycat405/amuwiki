@@ -20,6 +20,8 @@ docker cp supabase/tests/document_wiki_links.sql supabase_db_amuwiki:/tmp/docume
 docker exec supabase_db_amuwiki psql -U postgres -d postgres -f /tmp/document_wiki_links.sql
 docker cp supabase/tests/lint_suggestions.sql supabase_db_amuwiki:/tmp/lint_suggestions.sql
 docker exec supabase_db_amuwiki psql -U postgres -d postgres -f /tmp/lint_suggestions.sql
+docker cp supabase/tests/ai_settings.sql supabase_db_amuwiki:/tmp/ai_settings.sql
+docker exec supabase_db_amuwiki psql -U postgres -d postgres -f /tmp/ai_settings.sql
 ```
 
 프로덕션에는 Dashboard SQL Editor가 아니라 Supabase CLI의 연결된 프로젝트 배포를 사용합니다.
