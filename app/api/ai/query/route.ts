@@ -69,7 +69,9 @@ export async function POST(request: NextRequest) {
     system: QUERY_SYSTEM_PROMPT,
     prompt: renderQueryPrompt(context, parsed.data.question),
     maxOutputTokens: MAX_OUTPUT_TOKENS,
-    effort: "medium",
+    // Grounded Q&A over a short context; medium reasoning on gpt-5-mini spent
+    // ~1,200 reasoning tokens and ~25s before the first visible byte.
+    effort: "low",
   });
 
   try {
