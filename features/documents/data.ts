@@ -17,7 +17,7 @@ type DocumentWriteResult =
   | { ok: true; id?: string; version?: number }
   | { ok: false; reason: "conflict" | "duplicate" | "not-found" | "unknown" };
 
-function linkTargetsForStorage(markdown: string) {
+export function linkTargetsForStorage(markdown: string) {
   return extractWikiLinkTargets(markdown).map((link) => ({
     normalized_title: link.normalizedTitle,
     title: link.title,
