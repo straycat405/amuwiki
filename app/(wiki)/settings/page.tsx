@@ -1,17 +1,25 @@
 import { FileUp, ListChecks, Settings } from "lucide-react";
 import Link from "next/link";
 
+import { AiSettingsSection } from "@/components/settings/ai-settings";
 import { SettingsForm } from "@/components/settings/settings-form";
+import { getAiSettings, getMonthlyUsage } from "@/features/ai/data";
 import { refreshSuggestions } from "@/features/lint/data";
 import { requireOwner } from "@/lib/auth/require-owner";
+import { getAiServerEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "설정" };
 
 export default async function SettingsPage() {
-  await requireOwner();
+  const user = await requireOwner();
   const supabase = await createClient();
-  const pendingCount = await refreshSuggestions(supabase);
+  const aiEnv = getAiServerEnv();
+  const [pendingCount, aiSettings, aiUsage] = await Promise.all([
+    refreshSuggestions(supabase),
+    getAiSettings(supabase, user.id),
+    getMonthlyUsage(supabase),
+  ]);
 
   return (
     <main className="document-stage document-stage--reading" id="main-content">
@@ -21,6 +29,12 @@ export default async function SettingsPage() {
           <h1 id="settings-title">설정</h1>
         </header>
         <SettingsForm />
+        <AiSettingsSection
+          configured={aiEnv.encryptionSecret !== null}
+          model={aiEnv.model}
+          settings={aiSettings}
+          usage={aiUsage}
+        />
         <div className="settings-section">
           <header className="settings-section__header">
             <h2>정리</h2>

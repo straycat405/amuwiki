@@ -708,6 +708,74 @@ button {
   color: #c53d4d;
 }
 
+.ai-key-row,
+.ai-cap-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.ai-key-form {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.ai-key-status {
+  font: 500 0.9rem/1.5 var(--font-ui);
+}
+
+.ai-field {
+  display: grid;
+  flex: 1 1 260px;
+  gap: var(--space-1);
+  color: var(--color-muted);
+  font: 650 0.78rem/1.2 var(--font-ui);
+}
+
+.ai-field input {
+  width: 100%;
+  height: 42px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  padding: 0 var(--space-3);
+  color: var(--color-text);
+  font: 450 0.95rem/1 var(--font-ui);
+  outline: none;
+}
+
+.ai-field input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 15%, transparent);
+}
+
+.ai-usage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+}
+
+.ai-usage div {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.ai-usage dt {
+  color: var(--color-muted);
+  font: 650 0.72rem/1.2 var(--font-ui);
+}
+
+.ai-usage dd {
+  margin: 0;
+  font: 600 0.95rem/1.3 var(--font-ui);
+}
+
 .import-intro {
   max-width: 640px;
   margin: 0 0 var(--space-6);
