@@ -48,8 +48,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <Script
           id="amuwiki-appearance"
           strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: appearanceScript }}
-        />
+        >
+          {appearanceScript}
+        </Script>
       </body>
     </html>
   );
