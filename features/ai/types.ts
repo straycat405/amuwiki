@@ -1,7 +1,9 @@
-import type { TokenUsage } from "@/lib/ai/pricing";
+import { type TokenUsage } from "@/lib/ai/pricing";
+import type { AiProviderId } from "@/lib/ai/provider";
 
 export type AiSettings = {
   enabled: boolean;
+  provider: AiProviderId;
   keyHint: string;
   monthlyTokenCap: number;
 };
@@ -13,6 +15,7 @@ export type AiRunStatus = "succeeded" | "failed" | "refused" | "capped";
 
 export type AiRunInput = {
   kind: AiRunKind;
+  provider: AiProviderId;
   model: string;
   status: AiRunStatus;
   usage?: Partial<TokenUsage>;

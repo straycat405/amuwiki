@@ -31,7 +31,7 @@ export default async function SettingsPage() {
         <SettingsForm />
         <AiSettingsSection
           configured={aiEnv.encryptionSecret !== null}
-          model={aiEnv.model}
+          models={aiEnv.models}
           settings={aiSettings}
           usage={aiUsage}
         />

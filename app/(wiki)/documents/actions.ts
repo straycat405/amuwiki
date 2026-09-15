@@ -23,6 +23,7 @@ import {
 } from "@/features/documents/document-schema";
 import { slugifyDocumentTitle } from "@/lib/markdown/slug";
 import { requireOwner } from "@/lib/auth/require-owner";
+import { getAiSettings } from "@/features/ai/data";
 import { getAiServerEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 
@@ -48,13 +49,15 @@ export async function createAiDraftDocumentAction(
 
   const user = await requireOwner();
   const supabase = await createClient();
+  const aiSettings = await getAiSettings(supabase, user.id);
   const draft = await createAiDraftDocument(supabase, user.id, {
     title: titleFromQuestion(parsed.data.question),
     bodyMarkdown: parsed.data.answer,
     frontmatter: {
       ai: {
         kind: "query",
-        model: getAiServerEnv().model,
+        provider: aiSettings.provider,
+        model: getAiServerEnv().models[aiSettings.provider],
         question: parsed.data.question,
         sourceSlugs: [parsed.data.sourceSlug, parsed.data.pageSlug].filter(
           (slug, index, all): slug is string => Boolean(slug) && all.indexOf(slug) === index,

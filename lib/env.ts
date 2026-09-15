@@ -11,12 +11,14 @@ const serverEnvSchema = publicEnvSchema.extend({
 });
 
 const aiEnvSchema = z.object({
-  AI_MODEL: z.string().trim().min(1).default("claude-opus-5"),
+  AI_ANTHROPIC_MODEL: z.string().trim().min(1).default("claude-opus-5"),
+  AI_OPENAI_MODEL: z.string().trim().min(1).default("gpt-5-mini"),
   AI_KEY_ENCRYPTION_SECRET: z.string().min(32).optional(),
 });
 
 export type AiServerEnv = {
-  model: string;
+  /** Operator-pinned model per provider; users pick the provider, not the model. */
+  models: { anthropic: string; openai: string };
   /** Null when AI features are not configured for this deployment. */
   encryptionSecret: string | null;
 };
@@ -40,11 +42,12 @@ export function getServerEnv() {
 
 export function getAiServerEnv(): AiServerEnv {
   const parsed = aiEnvSchema.parse({
-    AI_MODEL: process.env.AI_MODEL || undefined,
+    AI_ANTHROPIC_MODEL: process.env.AI_ANTHROPIC_MODEL || undefined,
+    AI_OPENAI_MODEL: process.env.AI_OPENAI_MODEL || undefined,
     AI_KEY_ENCRYPTION_SECRET: process.env.AI_KEY_ENCRYPTION_SECRET || undefined,
   });
   return {
-    model: parsed.AI_MODEL,
+    models: { anthropic: parsed.AI_ANTHROPIC_MODEL, openai: parsed.AI_OPENAI_MODEL },
     encryptionSecret: parsed.AI_KEY_ENCRYPTION_SECRET ?? null,
   };
 }

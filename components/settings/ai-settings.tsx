@@ -11,19 +11,26 @@ import {
 } from "@/app/(wiki)/settings/ai/actions";
 import type { AiSettings, AiUsage } from "@/features/ai/types";
 import { estimateCostUsd } from "@/lib/ai/pricing";
+import type { AiProviderId } from "@/lib/ai/provider";
 
 type Props = {
   configured: boolean;
-  model: string;
+  models: Record<AiProviderId, string>;
   settings: AiSettings;
   usage: AiUsage;
 };
 
+const providerOptions: { id: AiProviderId; label: string; placeholder: string }[] = [
+  { id: "openai", label: "OpenAI", placeholder: "sk-…" },
+  { id: "anthropic", label: "Anthropic", placeholder: "sk-ant-…" },
+];
+
 const numberFormat = new Intl.NumberFormat("ko-KR");
 
-export function AiSettingsSection({ configured, model, settings, usage }: Props) {
+export function AiSettingsSection({ configured, models, settings, usage }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [provider, setProvider] = useState<AiProviderId>(settings.provider);
   const [keyInput, setKeyInput] = useState("");
   const [capInput, setCapInput] = useState(String(settings.monthlyTokenCap));
   const [message, setMessage] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -37,15 +44,18 @@ export function AiSettingsSection({ configured, model, settings, usage }: Props)
     });
   }
 
-  const cost = estimateCostUsd(usage, model);
+  const activeProvider = settings.enabled ? settings.provider : provider;
+  const model = models[activeProvider];
+  const providerLabel = providerOptions.find((option) => option.id === activeProvider)?.label ?? activeProvider;
+  const cost = estimateCostUsd(usage, models[settings.provider]);
 
   return (
     <div className="settings-section" aria-labelledby="ai-settings-title">
       <header className="settings-section__header">
         <h2 id="ai-settings-title">AI</h2>
         <p>
-          내 Anthropic API 키로 카드 안에서 질문하고 빈 요약을 채웁니다. 키는 암호화해 저장하며
-          토큰 비용은 키 소유자에게 청구됩니다. 모델: <code>{model}</code>
+          내 API 키로 카드 안에서 질문하고 빈 요약을 채웁니다. 키는 암호화해 저장하며 토큰
+          비용은 키 소유자에게 청구됩니다. 모델: <code>{model}</code>
         </p>
       </header>
 
@@ -59,7 +69,7 @@ export function AiSettingsSection({ configured, model, settings, usage }: Props)
         {settings.enabled ? (
           <>
             <span className="ai-key-status">
-              연결됨 · <code>sk-ant-…{settings.keyHint}</code>
+              {providerLabel} 연결됨 · <code>…{settings.keyHint}</code>
             </span>
             <button
               type="button"
@@ -79,9 +89,10 @@ export function AiSettingsSection({ configured, model, settings, usage }: Props)
             onSubmit={(event) => {
               event.preventDefault();
               const value = keyInput;
+              const selected = provider;
               run(
                 async () => {
-                  const result = await saveApiKeyAction(value);
+                  const result = await saveApiKeyAction(selected, value);
                   if (result.ok) setKeyInput("");
                   return result;
                 },
@@ -89,14 +100,30 @@ export function AiSettingsSection({ configured, model, settings, usage }: Props)
               );
             }}
           >
+            <fieldset className="ai-provider">
+              <legend className="visually-hidden">공급자</legend>
+              {providerOptions.map((option) => (
+                <label key={option.id} className={`ai-provider__option${provider === option.id ? " ai-provider__option--active" : ""}`}>
+                  <input
+                    checked={provider === option.id}
+                    disabled={!configured || pending}
+                    name="provider"
+                    onChange={() => setProvider(option.id)}
+                    type="radio"
+                    value={option.id}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </fieldset>
             <label className="ai-field">
-              <span>Anthropic API 키</span>
+              <span>{providerLabel} API 키</span>
               <input
                 autoComplete="off"
                 disabled={!configured || pending}
                 name="apiKey"
                 onChange={(event) => setKeyInput(event.target.value)}
-                placeholder="sk-ant-…"
+                placeholder={providerOptions.find((option) => option.id === provider)?.placeholder}
                 spellCheck={false}
                 type="password"
                 value={keyInput}

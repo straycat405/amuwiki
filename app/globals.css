@@ -729,6 +729,36 @@ button {
   font: 500 0.9rem/1.5 var(--font-ui);
 }
 
+.ai-provider {
+  display: flex;
+  flex-basis: 100%;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.ai-provider__option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 6px var(--space-3);
+  font: 550 0.82rem/1 var(--font-ui);
+  cursor: pointer;
+}
+
+.ai-provider__option--active {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.ai-provider__option input {
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
 .ai-field {
   display: grid;
   flex: 1 1 260px;

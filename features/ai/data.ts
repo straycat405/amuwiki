@@ -6,12 +6,16 @@ import type {
   AiUsage,
   SaveApiKeyResult,
 } from "@/features/ai/types";
-import { type KeyVerification, verifyApiKey } from "@/lib/ai/client";
 import { apiKeyHint, decryptApiKey, encryptApiKey } from "@/lib/ai/crypto";
+import type { AiProviderId, KeyVerification } from "@/lib/ai/provider";
+import { getAiProvider } from "@/lib/ai/providers";
 
-const apiKeyPattern = /^sk-ant-[A-Za-z0-9_-]{20,}$/;
-
-const defaultSettings: AiSettings = { enabled: false, keyHint: "", monthlyTokenCap: 0 };
+const defaultSettings: AiSettings = {
+  enabled: false,
+  provider: "anthropic",
+  keyHint: "",
+  monthlyTokenCap: 0,
+};
 
 export async function getAiSettings(
   supabase: SupabaseClient,
@@ -19,40 +23,46 @@ export async function getAiSettings(
 ): Promise<AiSettings> {
   const { data, error } = await supabase
     .from("user_ai_settings")
-    .select("enabled, key_hint, monthly_token_cap")
+    .select("enabled, provider, key_hint, monthly_token_cap")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error("AI 설정을 불러오지 못했습니다.");
   if (!data) return defaultSettings;
-  return { enabled: data.enabled, keyHint: data.key_hint, monthlyTokenCap: data.monthly_token_cap };
+  return {
+    enabled: data.enabled,
+    provider: data.provider,
+    keyHint: data.key_hint,
+    monthlyTokenCap: data.monthly_token_cap,
+  };
 }
 
-/** Returns the caller's plaintext key for a server-side API call, or null when AI is off. */
+/** Returns the caller's provider and plaintext key for a server-side call, or null when AI is off. */
 export async function getDecryptedApiKey(
   supabase: SupabaseClient,
   userId: string,
   encryptionSecret: string,
-): Promise<string | null> {
+): Promise<{ provider: AiProviderId; apiKey: string } | null> {
   const { data, error } = await supabase
     .from("user_ai_settings")
-    .select("enabled, encrypted_key")
+    .select("enabled, provider, encrypted_key")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error("AI 설정을 불러오지 못했습니다.");
   if (!data?.enabled || !data.encrypted_key) return null;
-  return decryptApiKey(data.encrypted_key, encryptionSecret);
+  return { provider: data.provider, apiKey: decryptApiKey(data.encrypted_key, encryptionSecret) };
 }
 
 export async function saveApiKey(
   supabase: SupabaseClient,
   userId: string,
+  provider: AiProviderId,
   plainKey: string,
   encryptionSecret: string | null,
-  verify: (key: string) => Promise<KeyVerification> = verifyApiKey,
+  verify: (key: string) => Promise<KeyVerification> = getAiProvider(provider).verifyKey,
 ): Promise<SaveApiKeyResult> {
   if (!encryptionSecret) return { ok: false, reason: "unconfigured" };
   const key = plainKey.trim();
-  if (!apiKeyPattern.test(key)) return { ok: false, reason: "malformed" };
+  if (!getAiProvider(provider).keyPattern.test(key)) return { ok: false, reason: "malformed" };
 
   const verification = await verify(key);
   if (verification !== "valid") return { ok: false, reason: verification };
@@ -62,6 +72,7 @@ export async function saveApiKey(
     {
       user_id: userId,
       enabled: true,
+      provider,
       encrypted_key: encryptApiKey(key, encryptionSecret),
       key_hint: keyHint,
     },
@@ -123,6 +134,7 @@ export async function recordRun(
     .insert({
       owner_id: ownerId,
       kind: run.kind,
+      provider: run.provider,
       model: run.model,
       status: run.status,
       input_tokens: run.usage?.inputTokens ?? 0,
