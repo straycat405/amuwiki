@@ -31,3 +31,6 @@ npm-debug.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# local task state and backups
+.dryforge/
