@@ -12,6 +12,8 @@ import {
   extractWikiLinkTargets,
   type WikiLinkResolutions,
 } from "@/lib/markdown/wiki-links";
+import type { Annotation } from "@/features/annotations/types";
+import { markdownToAnchorText, reconnectAnchor } from "@/lib/markdown/anchor-text";
 
 type DocumentWriteResult =
   | { ok: true; id?: string; version?: number }
@@ -290,8 +292,31 @@ export async function updateDocument(
   documentId: string,
   input: DocumentInput & { version: number },
   frontmatter: Record<string, unknown>,
+  annotations: Annotation[] = [],
 ): Promise<DocumentWriteResult> {
-  const { data, error } = await supabase.rpc("update_document", {
+  const text = markdownToAnchorText(input.bodyMarkdown);
+  const anchors = annotations
+    .filter((annotation) => annotation.status !== "orphaned")
+    .map((annotation) => {
+      const resolved = reconnectAnchor(text, {
+        id: annotation.id,
+        start: annotation.anchor_start,
+        end: annotation.anchor_end,
+        exact: annotation.quote_exact,
+        prefix: annotation.quote_prefix,
+        suffix: annotation.quote_suffix,
+        status: annotation.status,
+      });
+      return {
+        id: resolved.id,
+        anchor_start: resolved.start,
+        anchor_end: resolved.end,
+        quote_prefix: resolved.prefix,
+        quote_suffix: resolved.suffix,
+        status: resolved.status,
+      };
+    });
+  const { data, error } = await supabase.rpc("update_document_with_annotation_anchors", {
     p_document_id: documentId,
     p_expected_version: input.version,
     p_title: input.title,
@@ -300,6 +325,7 @@ export async function updateDocument(
     p_body_markdown: input.bodyMarkdown,
     p_frontmatter: frontmatter,
     p_link_targets: linkTargetsForStorage(input.bodyMarkdown),
+    p_annotation_anchors: anchors,
   });
 
   if (error?.code === "40001") return { ok: false, reason: "conflict" };
