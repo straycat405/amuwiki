@@ -27,7 +27,8 @@ import { getAiSettings } from "@/features/ai/data";
 import { getAiServerEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { annotationCreateSchema, annotationUpdateSchema } from "@/features/annotations/schema";
-import { createAnnotation, deleteAnnotation, listAnnotations, updateAnnotation } from "@/features/annotations/data";
+import { createAnnotation, deleteAnnotation, getAnnotation, listAnnotations, updateAnnotation } from "@/features/annotations/data";
+import { markdownToAnchorText } from "@/lib/markdown/anchor-text";
 import type { Annotation } from "@/features/annotations/types";
 
 const aiDraftSchema = z.object({
@@ -202,6 +203,8 @@ export async function createAnnotationAction(input: unknown): Promise<Annotation
   const supabase = await createClient();
   const document = await getDocumentById(supabase, user.id, parsed.data.documentId);
   if (!document || document.version !== parsed.data.documentRevision) return { ok: false, message: "문서가 변경되었습니다. 새로고침 후 다시 선택해주세요." };
+  const text = markdownToAnchorText(document.body_markdown);
+  if (text.slice(parsed.data.anchorStart, parsed.data.anchorEnd) !== parsed.data.quoteExact) return { ok: false, message: "선택 범위가 현재 문서와 맞지 않습니다. 다시 선택해주세요." };
   const annotation = await createAnnotation(supabase, user.id, parsed.data);
   if (!annotation) return { ok: false, message: "주석을 저장하지 못했습니다." };
   revalidatePath(`/documents/${document.slug}`);
@@ -214,6 +217,15 @@ export async function updateAnnotationAction(input: unknown): Promise<Annotation
   const user = await requireOwner();
   const supabase = await createClient();
   const { id, ...changes } = parsed.data;
+  const existing = await getAnnotation(supabase, user.id, id);
+  if (!existing) return { ok: false, message: "주석을 찾을 수 없습니다." };
+  if (changes.anchorStart !== undefined || changes.anchorEnd !== undefined || changes.quoteExact !== undefined) {
+    const document = await getDocumentById(supabase, user.id, existing.document_id);
+    const start = changes.anchorStart ?? existing.anchor_start;
+    const end = changes.anchorEnd ?? existing.anchor_end;
+    const quote = changes.quoteExact ?? existing.quote_exact;
+    if (!document || markdownToAnchorText(document.body_markdown).slice(start, end) !== quote) return { ok: false, message: "선택 범위가 현재 문서와 맞지 않습니다. 다시 선택해주세요." };
+  }
   const annotation = await updateAnnotation(supabase, user.id, id, {
     ...(changes.bodyMarkdown === undefined ? {} : { body_markdown: changes.bodyMarkdown }),
     ...(changes.colorKey === undefined ? {} : { color_key: changes.colorKey }),
