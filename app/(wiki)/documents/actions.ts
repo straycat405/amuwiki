@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import {
   archiveDocument,
+  createAiDraftDocument,
   createDocument,
   createDraftDocument,
   deleteDraftDocument,
@@ -22,7 +23,49 @@ import {
 } from "@/features/documents/document-schema";
 import { slugifyDocumentTitle } from "@/lib/markdown/slug";
 import { requireOwner } from "@/lib/auth/require-owner";
+import { getAiServerEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+
+const aiDraftSchema = z.object({
+  question: z.string().trim().min(1).max(2000),
+  answer: z.string().trim().min(1).max(200_000),
+  sourceSlug: z.string().trim().min(1).max(240),
+  pageSlug: z.string().trim().min(1).max(240).nullable(),
+});
+
+const MAX_AI_DRAFT_TITLE = 80;
+
+function titleFromQuestion(question: string): string {
+  const oneLine = question.replace(/\s+/g, " ").trim().replace(/[?？!！.。]+$/g, "");
+  return oneLine.length > MAX_AI_DRAFT_TITLE ? `${oneLine.slice(0, MAX_AI_DRAFT_TITLE - 1)}…` : oneLine;
+}
+
+export async function createAiDraftDocumentAction(
+  input: unknown,
+): Promise<{ ok: true; slug: string } | { ok: false; message: string }> {
+  const parsed = aiDraftSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "저장할 내용이 올바르지 않습니다." };
+
+  const user = await requireOwner();
+  const supabase = await createClient();
+  const draft = await createAiDraftDocument(supabase, user.id, {
+    title: titleFromQuestion(parsed.data.question),
+    bodyMarkdown: parsed.data.answer,
+    frontmatter: {
+      ai: {
+        kind: "query",
+        model: getAiServerEnv().model,
+        question: parsed.data.question,
+        sourceSlugs: [parsed.data.sourceSlug, parsed.data.pageSlug].filter(
+          (slug, index, all): slug is string => Boolean(slug) && all.indexOf(slug) === index,
+        ),
+        createdAt: new Date().toISOString(),
+      },
+    },
+  });
+  if (!draft) return { ok: false, message: "초안 문서를 만들지 못했습니다." };
+  return { ok: true, slug: draft.slug };
+}
 
 const lifecycleSchema = z.object({
   documentId: z.uuid(),

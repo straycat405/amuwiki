@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { archiveDocumentAction } from "@/app/(wiki)/documents/actions";
 import { DocumentLifecycleButton } from "@/components/document/document-lifecycle-button";
 import { WikiLinkExplorer } from "@/components/document/wiki-link-explorer";
+import { getAiSettings } from "@/features/ai/data";
 import {
   getDocumentBySlug,
   listBacklinks,
@@ -25,9 +26,10 @@ export default async function DocumentPage({
   const supabase = await createClient();
   const document = await getDocumentBySlug(supabase, user.id, slug);
   if (!document) notFound();
-  const [wikiLinkResolutions, backlinks] = await Promise.all([
+  const [wikiLinkResolutions, backlinks, aiSettings] = await Promise.all([
     resolveWikiLinkTargets(supabase, user.id, document.body_markdown),
     listBacklinks(supabase, user.id, document.id),
+    getAiSettings(supabase, user.id),
     recordDocumentView(supabase, document.id),
   ]);
 
@@ -58,7 +60,9 @@ export default async function DocumentPage({
           </div>
         </header>
         <WikiLinkExplorer
+          aiEnabled={aiSettings.enabled}
           markdown={document.body_markdown}
+          pageSlug={document.slug}
           wikiLinkResolutions={wikiLinkResolutions}
         />
         {backlinks.length > 0 ? (

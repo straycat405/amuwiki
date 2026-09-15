@@ -369,6 +369,39 @@ export async function createDraftDocument(
   return { id: data.id as string };
 }
 
+const MAX_TITLE_ATTEMPTS = 20;
+
+/** Draft with body and frontmatter; retries with " (n)" suffixes when the title is taken. */
+export async function createAiDraftDocument(
+  supabase: SupabaseClient,
+  ownerId: string,
+  input: { title: string; bodyMarkdown: string; frontmatter: Record<string, unknown> },
+): Promise<{ id: string; slug: string } | null> {
+  const baseTitle = input.title.trim().slice(0, 190) || `AI 답변 ${Date.now()}`;
+
+  for (let attempt = 1; attempt <= MAX_TITLE_ATTEMPTS; attempt++) {
+    const title = attempt === 1 ? baseTitle : `${baseTitle} (${attempt})`;
+    const slug = slugifyDocumentTitle(title) || `draft-${Date.now()}`;
+    const { data, error } = await supabase
+      .from("documents")
+      .insert({
+        owner_id: ownerId,
+        title,
+        normalized_title: normalizeConcept(title),
+        slug,
+        summary: "",
+        body_markdown: input.bodyMarkdown,
+        frontmatter: input.frontmatter,
+        status: "draft",
+      })
+      .select("id, slug")
+      .single();
+    if (!error && data) return { id: data.id as string, slug: data.slug as string };
+    if (error?.code !== "23505") return null;
+  }
+  return null;
+}
+
 export async function reparentAttachments(
   supabase: SupabaseClient,
   ownerId: string,

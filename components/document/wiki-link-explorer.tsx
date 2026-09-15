@@ -5,12 +5,14 @@ import Link from "next/link";
 import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useRef,
   useState,
 } from "react";
 
+import { AskInCard } from "@/components/document/ask-in-card";
 import { MarkdownRenderer } from "@/components/document/markdown-renderer";
 import { usePreferences } from "@/components/preferences/preferences-provider";
 import type { WikiLinkResolutions } from "@/lib/markdown/wiki-links";
@@ -32,6 +34,9 @@ type PreviewCard = PreviewDocument & {
 type WikiLinkExplorerProps = {
   markdown: string;
   wikiLinkResolutions: WikiLinkResolutions;
+  /** Enables "ask" inside pinned cards; requires a stored API key. */
+  aiEnabled?: boolean;
+  pageSlug?: string | null;
 };
 
 const CLOSE_DELAY_MS = 150;
@@ -62,6 +67,8 @@ function cardPosition(x: number, y: number): CardPosition {
 export function WikiLinkExplorer({
   markdown,
   wikiLinkResolutions,
+  aiEnabled = false,
+  pageSlug = null,
 }: WikiLinkExplorerProps) {
   const { preferences } = usePreferences();
   const [hoveredCard, setHoveredCard] = useState<PreviewCard | null>(null);
@@ -241,6 +248,7 @@ export function WikiLinkExplorer({
       ) : null}
       {pinnedCards.map((card) => (
         <PreviewCardView
+          ask={aiEnabled ? <AskInCard pageSlug={pageSlug} slug={card.slug} /> : null}
           card={card}
           key={card.id}
           kind="pinned"
@@ -255,6 +263,7 @@ export function WikiLinkExplorer({
 }
 
 function PreviewCardView({
+  ask,
   card,
   kind,
   onClose,
@@ -264,6 +273,7 @@ function PreviewCardView({
   onEnter,
   onLeave,
 }: {
+  ask?: ReactNode;
   card: PreviewCard;
   kind: "hover" | "pinned";
   onClose?: () => void;
@@ -311,6 +321,7 @@ function PreviewCardView({
           wikiLinkResolutions={card.wikiLinkResolutions}
         />
       </div>
+      {ask}
     </section>
   );
 }
