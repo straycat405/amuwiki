@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { hideRecentView, listRecentViews } from "@/features/history/data";
+import { hideRecentView, listRecentViews, listRecentViewsPage } from "@/features/history/data";
 import {
   clearRecentSearches,
   deleteRecentSearch,
@@ -11,7 +11,7 @@ import {
   searchDocuments,
 } from "@/features/search/data";
 import type { RecentSearch, SearchResult } from "@/features/search/types";
-import type { RecentView } from "@/features/history/types";
+import type { RecentView, RecentViewsPage } from "@/features/history/types";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { createClient } from "@/lib/supabase/server";
 
@@ -63,4 +63,11 @@ export async function hideRecentViewAction(documentId: string): Promise<void> {
   await hideRecentView(supabase, user.id, documentId);
   revalidatePath("/", "layout");
   revalidatePath("/search");
+}
+
+/** Next page of the sidebar's recent-documents list; `before` is the last loaded item's lastViewedAt. */
+export async function loadMoreRecentViewsAction(before: string): Promise<RecentViewsPage> {
+  const user = await requireOwner();
+  const supabase = await createClient();
+  return listRecentViewsPage(supabase, user.id, 20, before);
 }

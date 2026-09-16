@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { RecentView } from "@/features/history/types";
+import type { RecentView, RecentViewsPage } from "@/features/history/types";
 
 type RecentViewRow = {
   last_viewed_at: string;
@@ -19,31 +19,53 @@ export async function recordDocumentView(
   await supabase.rpc("record_document_view", { p_document_id: documentId });
 }
 
-export async function listRecentViews(
+/**
+ * Fetches one page of recent views, ordered newest first. Pass the last loaded item's
+ * `lastViewedAt` as `before` to keyset-paginate the next page — fetches limit+1 rows to
+ * know whether more remain without a separate count query.
+ */
+export async function listRecentViewsPage(
   supabase: SupabaseClient,
   ownerId: string,
   limit = 20,
-): Promise<RecentView[]> {
-  const { data, error } = await supabase
+  before?: string,
+): Promise<RecentViewsPage> {
+  let query = supabase
     .from("recent_views")
     .select("last_viewed_at, documents!inner(id, slug, title, summary, deleted_at)")
     .eq("user_id", ownerId)
     .is("hidden_at", null)
     .is("documents.deleted_at", null)
     .order("last_viewed_at", { ascending: false })
-    .limit(limit);
+    .limit(limit + 1);
+  if (before) query = query.lt("last_viewed_at", before);
 
-  if (error || !data) return [];
+  const { data, error } = await query;
+  if (error || !data) return { views: [], hasMore: false };
 
-  return (data as unknown as RecentViewRow[])
-    .filter((row) => row.documents)
-    .map((row) => ({
+  const rows = (data as unknown as RecentViewRow[]).filter((row) => row.documents);
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+
+  return {
+    views: page.map((row) => ({
       documentId: row.documents!.id,
       slug: row.documents!.slug,
       title: row.documents!.title,
       summary: row.documents!.summary,
       lastViewedAt: row.last_viewed_at,
-    }));
+    })),
+    hasMore,
+  };
+}
+
+export async function listRecentViews(
+  supabase: SupabaseClient,
+  ownerId: string,
+  limit = 20,
+): Promise<RecentView[]> {
+  const { views } = await listRecentViewsPage(supabase, ownerId, limit);
+  return views;
 }
 
 export async function hideRecentView(

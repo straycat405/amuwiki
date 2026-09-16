@@ -209,6 +209,23 @@ button {
   padding: var(--space-6) var(--space-5);
 }
 
+.wiki-sidebar__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.wiki-sidebar__sentinel {
+  height: 1px;
+}
+
+.sidebar-loading-more {
+  margin: var(--space-2) 0 0;
+  color: var(--color-muted);
+  font: 400 0.78rem/1.5 var(--font-ui);
+  text-align: center;
+}
+
 .sidebar-heading {
   margin: 0 0 var(--space-4);
   color: var(--color-muted);

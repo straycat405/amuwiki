@@ -5,3 +5,8 @@ export type RecentView = {
   summary: string;
   lastViewedAt: string;
 };
+
+export type RecentViewsPage = {
+  views: RecentView[];
+  hasMore: boolean;
+};
