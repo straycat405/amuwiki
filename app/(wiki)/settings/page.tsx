@@ -54,7 +54,7 @@ export default async function SettingsPage() {
         <div className="settings-section">
           <header className="settings-section__header">
             <h2>Markdown 가져오기</h2>
-            <p>여러 개의 .md, .markdown, .txt 파일을 문서로 가져옵니다.</p>
+            <p>.md, .markdown, .txt 파일 또는 ZIP(Markdown 폴더·Obsidian vault)을 문서로 가져옵니다.</p>
           </header>
           <Link className="secondary-button" href="/settings/import">
             <FileUp size={16} aria-hidden="true" />

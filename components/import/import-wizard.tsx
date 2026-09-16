@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, FileUp, Upload } from "lucide-react";
+import { AlertTriangle, FileArchive, FileUp, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
@@ -11,6 +11,7 @@ import type {
 } from "@/features/imports/types";
 
 type Phase = "select" | "analyzing" | "review" | "committing" | "done";
+type UploadMode = "files" | "zip";
 
 const WARNING_LABELS: Record<string, string> = {
   duplicate_title_in_batch: "선택한 파일들 안에서 제목이 중복됩니다.",
@@ -22,19 +23,29 @@ const WARNING_LABELS: Record<string, string> = {
 
 export function ImportWizard() {
   const [phase, setPhase] = useState<Phase>("select");
+  const [uploadMode, setUploadMode] = useState<UploadMode>("files");
   const [files, setFiles] = useState<File[]>([]);
+  const [zipFile, setZipFile] = useState<File | null>(null);
+  const [isObsidianVault, setIsObsidianVault] = useState(false);
   const [analysis, setAnalysis] = useState<ImportAnalysis | null>(null);
   const [conflictPolicy, setConflictPolicy] = useState<"skip" | "rename">("skip");
   const [result, setResult] = useState<ImportCommitResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const zipInputRef = useRef<HTMLInputElement>(null);
 
   const analyze = async () => {
-    if (files.length === 0) return;
+    if (uploadMode === "files" && files.length === 0) return;
+    if (uploadMode === "zip" && !zipFile) return;
     setError(null);
     setPhase("analyzing");
     const body = new FormData();
-    files.forEach((file) => body.append("files", file));
+    if (uploadMode === "zip" && zipFile) {
+      body.append("zip", zipFile);
+      body.append("sourceKind", isObsidianVault ? "obsidian-vault" : "markdown-zip");
+    } else {
+      files.forEach((file) => body.append("files", file));
+    }
     try {
       const response = await fetch("/api/imports", { method: "POST", body });
       const payload = (await response.json()) as ImportAnalysis & {
@@ -82,6 +93,7 @@ export function ImportWizard() {
   const reset = () => {
     setPhase("select");
     setFiles([]);
+    setZipFile(null);
     setAnalysis(null);
     setResult(null);
     setError(null);
@@ -93,6 +105,7 @@ export function ImportWizard() {
         <h2>가져오기 완료</h2>
         <p className="import-wizard__summary">
           가져옴 {result.imported}건 · 건너뜀 {result.skipped}건 · 실패 {result.failed}건
+          {result.attached > 0 ? ` · 첨부 연결 ${result.attached}건` : ""}
         </p>
         <ul className="import-result-list">
           {result.items.map((item) => (
@@ -130,6 +143,8 @@ export function ImportWizard() {
           {analysis.duplicateInBatchCount + analysis.conflictWithExistingCount > 0
             ? ` · 제목 중복 ${analysis.duplicateInBatchCount + analysis.conflictWithExistingCount}건`
             : ""}
+          {analysis.attachmentCount > 0 ? ` · 첨부파일 ${analysis.attachmentCount}개` : ""}
+          {analysis.ignoredCount > 0 ? ` · 건너뛴 항목 ${analysis.ignoredCount}개` : ""}
         </p>
 
         <ul className="import-item-list">
@@ -219,34 +234,88 @@ export function ImportWizard() {
 
   return (
     <div className="import-wizard">
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".md,.markdown,.txt"
-        multiple
-        className="visually-hidden"
-        onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
-      />
-      <button
-        className="import-dropzone"
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        disabled={phase === "analyzing"}
-      >
-        <FileUp size={28} aria-hidden="true" />
-        <span>
-          {files.length > 0
-            ? `${files.length}개 파일 선택됨`
-            : "클릭해서 .md, .markdown, .txt 파일 선택 (여러 개 가능)"}
-        </span>
-      </button>
+      <div className="settings-options" role="radiogroup" aria-label="가져오기 방식">
+        <label className={"settings-option" + (uploadMode === "files" ? " settings-option--active" : "")}>
+          <input
+            type="radio"
+            name="uploadMode"
+            checked={uploadMode === "files"}
+            onChange={() => setUploadMode("files")}
+          />
+          여러 파일
+        </label>
+        <label className={"settings-option" + (uploadMode === "zip" ? " settings-option--active" : "")}>
+          <input
+            type="radio"
+            name="uploadMode"
+            checked={uploadMode === "zip"}
+            onChange={() => setUploadMode("zip")}
+          />
+          ZIP (Markdown 폴더 · Obsidian vault)
+        </label>
+      </div>
+
+      {uploadMode === "files" ? (
+        <>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".md,.markdown,.txt"
+            multiple
+            className="visually-hidden"
+            onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+          />
+          <button
+            className="import-dropzone"
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={phase === "analyzing"}
+          >
+            <FileUp size={28} aria-hidden="true" />
+            <span>
+              {files.length > 0
+                ? `${files.length}개 파일 선택됨`
+                : "클릭해서 .md, .markdown, .txt 파일 선택 (여러 개 가능)"}
+            </span>
+          </button>
+        </>
+      ) : (
+        <>
+          <input
+            ref={zipInputRef}
+            type="file"
+            accept=".zip"
+            className="visually-hidden"
+            onChange={(event) => setZipFile(event.target.files?.[0] ?? null)}
+          />
+          <button
+            className="import-dropzone"
+            type="button"
+            onClick={() => zipInputRef.current?.click()}
+            disabled={phase === "analyzing"}
+          >
+            <FileArchive size={28} aria-hidden="true" />
+            <span>{zipFile ? zipFile.name : "클릭해서 .zip 파일 선택 (최대 250MB)"}</span>
+          </button>
+          <label className="settings-option">
+            <input
+              type="checkbox"
+              checked={isObsidianVault}
+              onChange={(event) => setIsObsidianVault(event.target.checked)}
+            />
+            Obsidian vault입니다 (.obsidian 폴더는 항상 제외됩니다)
+          </label>
+        </>
+      )}
 
       {error ? <p className="settings-status settings-status--error">{error}</p> : null}
 
       <button
         className="primary-button"
         type="button"
-        disabled={files.length === 0 || phase === "analyzing"}
+        disabled={
+          (uploadMode === "files" ? files.length === 0 : !zipFile) || phase === "analyzing"
+        }
         onClick={analyze}
       >
         {phase === "analyzing" ? "분석 중..." : "분석하기"}

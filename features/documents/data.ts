@@ -286,6 +286,24 @@ export async function createDocument(
   return { ok: true, id: data };
 }
 
+/**
+ * Rewrites just-imported body_markdown to point relative attachment references at their
+ * new Storage-backed URLs. Not a user-facing edit, so it bypasses update_document
+ * (no new revision/version bump) — reindexAllDocuments re-resolves wiki links afterward.
+ */
+export async function updateDocumentBodyMarkdown(
+  supabase: SupabaseClient,
+  ownerId: string,
+  documentId: string,
+  bodyMarkdown: string,
+): Promise<void> {
+  await supabase
+    .from("documents")
+    .update({ body_markdown: bodyMarkdown })
+    .eq("owner_id", ownerId)
+    .eq("id", documentId);
+}
+
 export async function updateDocument(
   supabase: SupabaseClient,
   documentId: string,
