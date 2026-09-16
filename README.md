@@ -1,6 +1,6 @@
 <div align="center">
 
-# 아무위키
+<img src="docs/assets/readme-header.png" alt="아무위키" height="72">
 
 **읽던 문서를 떠나지 않고, 연결된 개념을 카드로 따라가는 개인 위키**
 
