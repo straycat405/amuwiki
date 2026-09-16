@@ -64,6 +64,15 @@ describe("MarkdownRenderer", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("assigns headings the same #slug wiki-link anchors already point to", () => {
+    render(<MarkdownRenderer markdown="## 과학 승리" />);
+
+    expect(screen.getByRole("heading", { name: "과학 승리" })).toHaveAttribute(
+      "id",
+      "과학-승리",
+    );
+  });
+
   it("marks unresolved links when resolutions are available", () => {
     render(
       <MarkdownRenderer

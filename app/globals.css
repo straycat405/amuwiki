@@ -13,6 +13,7 @@ html {
   background: var(--color-bg);
   color: var(--color-text);
   font-size: calc(16px * var(--font-scale));
+  scroll-behavior: smooth;
 }
 
 body {
@@ -514,9 +515,9 @@ button {
 
 .document-view__header h1 {
   margin: 0;
-  font-size: clamp(2.2rem, 5vw, 4rem);
-  line-height: 1.12;
-  letter-spacing: -0.055em;
+  font-size: clamp(1.7rem, 2.6vw, 2.35rem);
+  line-height: 1.2;
+  letter-spacing: -0.03em;
 }
 
 .document-view__header p {
@@ -528,6 +529,49 @@ button {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
+}
+
+.toc {
+  width: min(100%, var(--content-width));
+  margin: 0 0 var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--space-3) var(--space-4);
+}
+
+.toc__summary {
+  cursor: pointer;
+  color: var(--color-muted);
+  font: 700 0.82rem/1.4 var(--font-ui);
+  letter-spacing: 0.02em;
+}
+
+.toc[open] .toc__summary {
+  margin-bottom: var(--space-2);
+}
+
+.toc__list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: 1.3em;
+  list-style: decimal;
+}
+
+.toc__list .toc__list {
+  margin-top: var(--space-1);
+}
+
+.toc__item a {
+  color: var(--color-text);
+  font-size: 0.92rem;
+  text-decoration: none;
+}
+
+.toc__item a:hover {
+  color: var(--color-accent);
+  text-decoration: underline;
 }
 
 .lifecycle-action {
@@ -1439,6 +1483,13 @@ button {
 .markdown-body h3 {
   line-height: 1.25;
   letter-spacing: -0.035em;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  scroll-margin-top: calc(var(--header-height) + var(--space-4));
 }
 
 .markdown-body h2 {

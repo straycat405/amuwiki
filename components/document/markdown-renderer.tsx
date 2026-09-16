@@ -12,6 +12,7 @@ import {
   remarkWikiLinks,
   type WikiLinkResolutions,
 } from "@/lib/markdown/wiki-links";
+import { remarkHeadingIds } from "@/lib/markdown/heading-ids";
 import { remarkLineBreaks } from "@/lib/markdown/line-breaks";
 
 type MarkdownRendererProps = {
@@ -53,6 +54,7 @@ export function MarkdownRenderer({
   const remarkPlugins: PluggableList = [
     remarkGfm,
     [remarkWikiLinks, wikiLinkResolutions],
+    remarkHeadingIds,
   ];
   if (preferences.lineBreakMode === "hard") remarkPlugins.push(remarkLineBreaks);
 

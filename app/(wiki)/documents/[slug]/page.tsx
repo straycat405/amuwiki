@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { archiveDocumentAction } from "@/app/(wiki)/documents/actions";
 import { DocumentLifecycleButton } from "@/components/document/document-lifecycle-button";
+import { TableOfContents } from "@/components/document/table-of-contents";
 import { WikiLinkExplorer } from "@/components/document/wiki-link-explorer";
 import { getAiSettings } from "@/features/ai/data";
 import {
@@ -15,6 +16,7 @@ import {
 import { recordDocumentView } from "@/features/history/data";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { decodeDocumentSlug } from "@/lib/markdown/slug";
+import { extractToc } from "@/lib/markdown/toc";
 import { createClient } from "@/lib/supabase/server";
 
 export async function generateMetadata({
@@ -75,6 +77,7 @@ export default async function DocumentPage({
             />
           </div>
         </header>
+        <TableOfContents entries={extractToc(document.body_markdown)} />
         <WikiLinkExplorer aiEnabled={aiSettings.enabled} markdown={document.body_markdown} pageSlug={document.slug} wikiLinkResolutions={wikiLinkResolutions} />
         {backlinks.length > 0 ? (
           <section className="backlinks" aria-labelledby="backlinks-title">
