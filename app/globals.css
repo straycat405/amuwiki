@@ -1275,7 +1275,7 @@ button {
 .document-editor__toolbar {
   display: grid;
   min-height: 64px;
-  grid-template-columns: 1fr auto auto auto auto;
+  grid-template-columns: 1fr auto auto auto auto auto;
   align-items: center;
   gap: var(--space-4);
   border-bottom: 1px solid var(--color-border);
@@ -1321,8 +1321,8 @@ button {
 }
 
 .document-title-input {
-  font: 720 clamp(1.8rem, 3.5vw, 3.2rem)/1.18 var(--font-document);
-  letter-spacing: -0.05em;
+  font: 800 clamp(1.7rem, 2.6vw, 2.35rem)/1.2 var(--font-document);
+  letter-spacing: -0.03em;
 }
 
 .document-summary-input {
@@ -1871,7 +1871,7 @@ button {
   }
 
   .document-editor__toolbar {
-    grid-template-columns: 1fr auto auto auto;
+    grid-template-columns: 1fr auto auto auto auto;
   }
 
   .document-editor__status {

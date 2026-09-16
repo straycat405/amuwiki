@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, FileText, Image as ImageIcon, Save } from "lucide-react";
+import { Code2, Eye, FileText, Image as ImageIcon, Save } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import {
@@ -16,6 +16,7 @@ import { createDraftDocumentAction } from "@/app/(wiki)/documents/actions";
 import { MarkdownRenderer } from "@/components/document/markdown-renderer";
 import type { DocumentActionState } from "@/features/documents/action-state";
 import { isAllowedImportFile, parseImportFile } from "@/features/imports/parse";
+import { convertClipboardHtmlToMarkdown } from "@/lib/markdown/html-to-markdown";
 
 type EditorDocument = {
   title: string;
@@ -104,11 +105,11 @@ export function DocumentEditor({
     if (state.redirectTo) router.push(state.redirectTo as Route);
   }, [currentVersion, document, router, state, storageKey]);
 
-  const insertAtCursor = useCallback((snippet: string) => {
+  const insertAtCursor = useCallback((snippet: string, cursorOffset = snippet.length) => {
     const textarea = textareaRef.current;
+    const start = textarea?.selectionStart ?? document.bodyMarkdown.length;
+    const end = textarea?.selectionEnd ?? document.bodyMarkdown.length;
     setDocument((current) => {
-      const start = textarea?.selectionStart ?? current.bodyMarkdown.length;
-      const end = textarea?.selectionEnd ?? current.bodyMarkdown.length;
       return {
         ...current,
         bodyMarkdown:
@@ -117,7 +118,21 @@ export function DocumentEditor({
           current.bodyMarkdown.slice(end),
       };
     });
-  }, []);
+    requestAnimationFrame(() => {
+      textarea?.focus();
+      textarea?.setSelectionRange(start + cursorOffset, start + cursorOffset);
+    });
+  }, [document.bodyMarkdown.length]);
+
+  const insertCodeBlock = useCallback(() => {
+    const textarea = textareaRef.current;
+    const selected = textarea
+      ? document.bodyMarkdown.slice(textarea.selectionStart, textarea.selectionEnd)
+      : "";
+    const prefix = document.bodyMarkdown && !document.bodyMarkdown.endsWith("\n") ? "\n\n" : "";
+    const snippet = `${prefix}\`\`\`\n${selected}\n\`\`\`\n`;
+    insertAtCursor(snippet, prefix.length + 4);
+  }, [document.bodyMarkdown, insertAtCursor]);
 
   const ensureDocumentId = useCallback(async (): Promise<string | null> => {
     if (effectiveDocumentId) return effectiveDocumentId;
@@ -173,9 +188,18 @@ export function DocumentEditor({
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
     const files = Array.from(event.clipboardData?.files ?? []);
     const images = files.filter((file) => file.type.startsWith("image/"));
-    if (images.length === 0) return;
+    if (images.length > 0) {
+      event.preventDefault();
+      void uploadFiles(images);
+      return;
+    }
+
+    const html = event.clipboardData?.getData("text/html");
+    if (!html) return;
+    const markdown = convertClipboardHtmlToMarkdown(html);
+    if (!markdown) return;
     event.preventDefault();
-    void uploadFiles(images);
+    insertAtCursor(markdown);
   };
 
   const loadTextFile = useCallback(
@@ -245,6 +269,10 @@ export function DocumentEditor({
         >
           <FileText size={16} aria-hidden="true" />
           파일 불러오기
+        </button>
+        <button className="secondary-button" onClick={insertCodeBlock} type="button">
+          <Code2 size={16} aria-hidden="true" />
+          코드
         </button>
         <button className="primary-button" disabled={pending} type="submit">
           <Save size={16} aria-hidden="true" />
