@@ -50,6 +50,41 @@ export async function listDocuments(
   return (data ?? []) as DocumentListItem[];
 }
 
+export type ExportableDocument = {
+  id: string;
+  slug: string;
+  title: string;
+  bodyMarkdown: string;
+  frontmatter: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** Active, non-deleted documents only — the same scope shown in the main document list. */
+export async function listDocumentsForExport(
+  supabase: SupabaseClient,
+  ownerId: string,
+): Promise<ExportableDocument[]> {
+  const { data, error } = await supabase
+    .from("documents")
+    .select("id, slug, title, body_markdown, frontmatter, created_at, updated_at")
+    .eq("owner_id", ownerId)
+    .eq("status", "active")
+    .is("deleted_at", null)
+    .order("slug", { ascending: true });
+
+  if (error) throw new Error("내보낼 문서를 불러오지 못했습니다.");
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    bodyMarkdown: row.body_markdown,
+    frontmatter: (row.frontmatter as Record<string, unknown>) ?? {},
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }));
+}
+
 export async function listDeletedDocuments(
   supabase: SupabaseClient,
   ownerId: string,
@@ -237,6 +272,26 @@ export async function addDocumentAlias(
     alias: trimmed,
     normalized_alias: normalizeConcept(trimmed),
   });
+}
+
+/** Aliases for every active document, grouped by document id — used to build export frontmatter. */
+export async function listAllAliasesByOwner(
+  supabase: SupabaseClient,
+  ownerId: string,
+): Promise<Map<string, string[]>> {
+  const { data, error } = await supabase
+    .from("document_aliases")
+    .select("document_id, alias")
+    .eq("owner_id", ownerId);
+  if (error) throw new Error("별칭을 불러오지 못했습니다.");
+
+  const byDocument = new Map<string, string[]>();
+  for (const row of data ?? []) {
+    const aliases = byDocument.get(row.document_id) ?? [];
+    aliases.push(row.alias);
+    byDocument.set(row.document_id, aliases);
+  }
+  return byDocument;
 }
 
 export async function listNormalizedTitleSet(

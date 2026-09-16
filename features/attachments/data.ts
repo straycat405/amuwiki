@@ -80,3 +80,35 @@ export async function getAttachmentById(
     mimeType: data.mime_type,
   };
 }
+
+export type ExportableAttachment = Attachment & {
+  documentId: string;
+  sizeBytes: number;
+  sha256: string;
+};
+
+/** Every non-deleted attachment belonging to the given documents — used to build a full export. */
+export async function listAttachmentsForDocuments(
+  supabase: SupabaseClient,
+  ownerId: string,
+  documentIds: string[],
+): Promise<ExportableAttachment[]> {
+  if (documentIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("attachments")
+    .select("id, document_id, storage_path, original_name, mime_type, size_bytes, sha256")
+    .eq("owner_id", ownerId)
+    .in("document_id", documentIds)
+    .is("deleted_at", null);
+  if (error) throw new Error("내보낼 첨부파일을 불러오지 못했습니다.");
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    documentId: row.document_id,
+    storagePath: row.storage_path,
+    originalName: row.original_name,
+    mimeType: row.mime_type,
+    sizeBytes: row.size_bytes,
+    sha256: row.sha256,
+  }));
+}

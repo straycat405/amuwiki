@@ -1,13 +1,15 @@
-import { FileUp, HardDriveDownload, ListChecks, Settings } from "lucide-react";
+import { Download, FileUp, HardDriveDownload, ListChecks, Settings } from "lucide-react";
 import Link from "next/link";
 
 import { AiSettingsSection } from "@/components/settings/ai-settings";
 import { SettingsForm } from "@/components/settings/settings-form";
 import { getAiSettings, getMonthlyUsage } from "@/features/ai/data";
 import { listStaleDraftDocuments } from "@/features/documents/cleanup";
+import { getExportStats } from "@/features/export/build";
 import { refreshSuggestions } from "@/features/lint/data";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { getAiServerEnv } from "@/lib/env";
+import { formatBytes } from "@/lib/format-bytes";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "설정" };
@@ -16,11 +18,12 @@ export default async function SettingsPage() {
   const user = await requireOwner();
   const supabase = await createClient();
   const aiEnv = getAiServerEnv();
-  const [pendingCount, aiSettings, aiUsage, staleDrafts] = await Promise.all([
+  const [pendingCount, aiSettings, aiUsage, staleDrafts, exportStats] = await Promise.all([
     refreshSuggestions(supabase),
     getAiSettings(supabase, user.id),
     getMonthlyUsage(supabase),
     listStaleDraftDocuments(supabase, user.id),
+    getExportStats(supabase, user.id),
   ]);
 
   return (
@@ -74,6 +77,19 @@ export default async function SettingsPage() {
             <HardDriveDownload size={16} aria-hidden="true" />
             정리 열기
           </Link>
+        </div>
+        <div className="settings-section">
+          <header className="settings-section__header">
+            <h2>전체 내보내기</h2>
+            <p>
+              문서 {exportStats.documentCount}개 · 첨부 {exportStats.attachmentCount}개 · 약{" "}
+              {formatBytes(exportStats.totalBytes)}
+            </p>
+          </header>
+          <a className="secondary-button" href="/api/export">
+            <Download size={16} aria-hidden="true" />
+            ZIP으로 내보내기
+          </a>
         </div>
       </section>
     </main>

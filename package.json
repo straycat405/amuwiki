@@ -29,6 +29,7 @@
     "remark-gfm": "^4.0.1",
     "unist-util-visit": "^5.1.0",
     "yauzl": "^3.4.0",
+    "yazl": "^3.3.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -44,7 +45,6 @@
     "jsdom": "^27.4.0",
     "prettier": "^3.9.6",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.11",
-    "yazl": "^3.3.1"
+    "vitest": "^4.1.11"
   }
 }

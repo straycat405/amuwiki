@@ -3,15 +3,10 @@ import { HardDriveDownload } from "lucide-react";
 import { DeleteStaleDraftsButton } from "@/components/settings/delete-stale-drafts-button";
 import { STALE_DRAFT_GRACE_DAYS, listStaleDraftDocuments } from "@/features/documents/cleanup";
 import { requireOwner } from "@/lib/auth/require-owner";
+import { formatBytes } from "@/lib/format-bytes";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "임시 문서 정리" };
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
-}
 
 export default async function StaleDraftsPage() {
   const user = await requireOwner();

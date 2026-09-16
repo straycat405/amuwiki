@@ -35,3 +35,9 @@ export function frontmatterTitle(data: Record<string, unknown>): string | null {
   const title = data.title;
   return typeof title === "string" && title.trim() ? title.trim() : null;
 }
+
+/** Inverse of parseFrontmatter — reuses gray-matter's writer so re-parsing round-trips. */
+export function stringifyFrontmatter(data: Record<string, unknown>, content: string): string {
+  if (Object.keys(data).length === 0) return content;
+  return matter.stringify(content, data);
+}
