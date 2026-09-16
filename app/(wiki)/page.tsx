@@ -1,4 +1,4 @@
-import { FileText, Plus } from "lucide-react";
+import { FileText, Plus, Upload } from "lucide-react";
 import Link from "next/link";
 
 import { listDocuments } from "@/features/documents/data";
@@ -18,9 +18,31 @@ export default async function HomePage() {
             <FileText size={24} strokeWidth={1.7} />
           </span>
           <h1 id="empty-title">아직 문서가 없습니다</h1>
-          <Link className="primary-button" href="/documents/new">
-            <Plus size={17} aria-hidden="true" />새 문서
-          </Link>
+          <p className="empty-document__lede">
+            Markdown으로 기록하고 문서 안에서 <code>[[개념]]</code>을 연결해 두면, 클릭했을 때
+            현재 자리를 떠나지 않고 카드로 이어서 읽을 수 있습니다.
+          </p>
+          <div className="empty-document__actions">
+            <Link className="primary-button" href="/documents/new">
+              <Plus size={17} aria-hidden="true" />새 문서 작성
+            </Link>
+            <Link className="secondary-button" href="/settings/import">
+              <Upload size={17} aria-hidden="true" />
+              Markdown 가져오기
+            </Link>
+          </div>
+          <div aria-hidden="true" className="empty-document__example">
+            <div className="example-card example-card--source">
+              <p className="example-card__label">문서 예시</p>
+              <p>
+                후속 개념: <span className="example-card__link">[[카드 탐색]]</span>
+              </p>
+            </div>
+            <div className="example-card example-card--popup">
+              <p className="example-card__label">클릭하면 여기서 열림</p>
+              <p>현재 문서를 떠나지 않고 관련 내용을 바로 확인합니다.</p>
+            </div>
+          </div>
         </section>
       ) : (
         <section

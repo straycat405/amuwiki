@@ -36,6 +36,9 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
+  // 검색어 응답을 기다리는 동안 true. 입력 이벤트에서 켜고, 응답이 도착하거나
+  // 검색어가 비워지면 끈다 — 잘못된 "결과 없음"이 잠깐 보이는 것을 막기 위함이다.
+  const [isSearching, setIsSearching] = useState(false);
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [recentViews, setRecentViews] = useState<RecentView[]>([]);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -45,10 +48,16 @@ export function CommandPalette() {
 
   const trimmedQuery = query.trim();
 
+  const updateQuery = useCallback((value: string) => {
+    setQuery(value);
+    setIsSearching(value.trim().length > 0);
+  }, []);
+
   const close = useCallback(() => {
     setOpen(false);
     setQuery("");
     setResults([]);
+    setIsSearching(false);
     setHighlightedIndex(0);
   }, []);
 
@@ -95,6 +104,7 @@ export function CommandPalette() {
       void searchAction(trimmedQuery).then((found) => {
         if (requestId.current !== thisRequest) return;
         setResults(found);
+        setIsSearching(false);
       });
     }, DEBOUNCE_MS);
     return () => {
@@ -104,6 +114,8 @@ export function CommandPalette() {
 
   const items = useMemo<PaletteItem[]>(() => {
     if (trimmedQuery) {
+      // 아직 이 검색어의 응답이 도착하지 않았다면 이전 검색어의 결과를 보여주지 않는다.
+      if (isSearching) return [];
       return results.map((result) => ({
         type: "result",
         key: result.documentId,
@@ -122,7 +134,7 @@ export function CommandPalette() {
         recentView,
       })),
     ];
-  }, [trimmedQuery, results, recentSearches, recentViews]);
+  }, [trimmedQuery, isSearching, results, recentSearches, recentViews]);
 
   const openDocument = useCallback(
     (slug: string, shouldRecordSearch: boolean) => {
@@ -150,12 +162,12 @@ export function CommandPalette() {
       } else if (item.type === "recent-view") {
         openDocument(item.recentView.slug, false);
       } else {
-        setQuery(item.recentSearch.displayQuery);
+        updateQuery(item.recentSearch.displayQuery);
         setHighlightedIndex(0);
         inputRef.current?.focus();
       }
     },
-    [openDocument],
+    [openDocument, updateQuery],
   );
 
   const removeRecentSearch = useCallback((normalizedQuery: string) => {
@@ -221,7 +233,7 @@ export function CommandPalette() {
                     value={query}
                     placeholder="제목, 별칭, 본문으로 검색"
                     onChange={(event) => {
-                      setQuery(event.target.value);
+                      updateQuery(event.target.value);
                       setHighlightedIndex(0);
                     }}
                     onKeyDown={handleKeyDown}
@@ -229,7 +241,13 @@ export function CommandPalette() {
                 </div>
 
                 <div className="command-palette__results">
-                  {trimmedQuery && items.length === 0 ? (
+                  {trimmedQuery && isSearching ? (
+                    <p className="command-palette__loading" role="status">
+                      검색 중…
+                    </p>
+                  ) : null}
+
+                  {trimmedQuery && !isSearching && items.length === 0 ? (
                     <p className="command-palette__empty">
                       검색 결과가 없습니다.
                     </p>

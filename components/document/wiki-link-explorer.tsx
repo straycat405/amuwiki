@@ -31,6 +31,7 @@ type PreviewCard = PreviewDocument & {
   id: string;
   position: CardPosition;
 };
+type TrailItem = { slug: string; title: string };
 
 type WikiLinkExplorerProps = {
   markdown: string;
@@ -44,7 +45,9 @@ const CLOSE_DELAY_MS = 150;
 const CARD_WIDTH = 360;
 const CARD_OFFSET = 16;
 const VIEWPORT_MARGIN = 12;
-const MAX_PINNED_CARDS = 10;
+// business-rules.md: 화면에는 고정 카드가 최대 세 개만 동시에 보이고 이전 탐색은 경로로 접힌다.
+const MAX_PINNED_CARDS = 3;
+const FIRST_CARD_HINT_KEY = "amuwiki:hint:card-explore-seen";
 
 function linkSlug(target: EventTarget | null): string | null {
   if (!(target instanceof Element)) return null;
@@ -95,7 +98,9 @@ export function WikiLinkExplorer({
   const { preferences } = usePreferences();
   const [hoveredCard, setHoveredCard] = useState<PreviewCard | null>(null);
   const [pinnedCards, setPinnedCards] = useState<PreviewCard[]>([]);
+  const [trail, setTrail] = useState<TrailItem[]>([]);
   const [notice, setNotice] = useState("");
+  const [showFirstCardHint, setShowFirstCardHint] = useState(false);
   const hoveredSlug = useRef<string | null>(null);
   const hoverTimer = useRef<number | null>(null);
   const closeTimer = useRef<number | null>(null);
@@ -170,26 +175,53 @@ export function WikiLinkExplorer({
         ]);
         return;
       }
-      if (pinnedCards.length >= MAX_PINNED_CARDS) {
-        setNotice(`고정 카드는 최대 ${MAX_PINNED_CARDS}개까지 열 수 있습니다.`);
-        return;
+
+      if (pinnedCards.length === 0) {
+        try {
+          if (!window.localStorage.getItem(FIRST_CARD_HINT_KEY)) {
+            setShowFirstCardHint(true);
+            window.localStorage.setItem(FIRST_CARD_HINT_KEY, "1");
+          }
+        } catch {
+          // localStorage를 쓸 수 없어도 카드 탐색 자체는 계속 동작해야 한다.
+        }
       }
+
       const preview = await fetchPreview(slug);
       if (!preview) return;
+      if (pinnedCards.some((card) => card.slug === preview.slug)) return;
+
+      // 카드가 이미 3개 열려 있으면 가장 먼저 열었던 카드를 닫는 대신
+      // 탐색 경로로 접어 사용자가 다시 열어볼 수 있게 남긴다.
+      const oldest = pinnedCards.length >= MAX_PINNED_CARDS ? pinnedCards[0] : undefined;
+      if (oldest) {
+        setTrail((current) => [
+          ...current.filter(
+            (item) => item.slug !== oldest.slug && item.slug !== preview.slug,
+          ),
+          { slug: oldest.slug, title: oldest.title },
+        ]);
+        setNotice(`'${oldest.title}'를 탐색 경로로 접고 '${preview.title}'를 열었습니다.`);
+      } else {
+        setTrail((current) => current.filter((item) => item.slug !== preview.slug));
+        setNotice("");
+      }
+
       setPinnedCards((cards) => {
         if (cards.some((card) => card.slug === preview.slug)) return cards;
-        if (cards.length >= MAX_PINNED_CARDS) {
-          setNotice(`고정 카드는 최대 ${MAX_PINNED_CARDS}개까지 열 수 있습니다.`);
-          return cards;
-        }
-        return [
-          ...cards,
-          { ...preview, id: `pin:${preview.slug}`, position },
-        ];
+        const next = cards.length >= MAX_PINNED_CARDS ? cards.slice(1) : cards;
+        return [...next, { ...preview, id: `pin:${preview.slug}`, position }];
       });
-      setNotice("");
     },
     [fetchPreview, pinnedCards],
+  );
+
+  const reopenFromTrail = useCallback(
+    (item: TrailItem) => {
+      hoveredSlug.current = item.slug;
+      void pinPreview(item.slug, cardPosition(window.innerWidth / 2, window.innerHeight / 3));
+    },
+    [pinPreview],
   );
 
   const handlePointerOver = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -260,6 +292,38 @@ export function WikiLinkExplorer({
       <span className="visually-hidden" aria-live="polite">
         {notice}
       </span>
+      {trail.length > 0 ? (
+        <nav aria-label="탐색 경로" className="exploration-trail">
+          <span className="exploration-trail__root">현재 문서</span>
+          {trail.map((item) => (
+            <span className="exploration-trail__step" key={item.slug}>
+              <span aria-hidden="true" className="exploration-trail__arrow">
+                →
+              </span>
+              <button
+                className="exploration-trail__item"
+                onClick={() => reopenFromTrail(item)}
+                type="button"
+              >
+                {item.title}
+              </button>
+            </span>
+          ))}
+        </nav>
+      ) : null}
+      {showFirstCardHint && pinnedCards.length > 0 ? (
+        <div className="explorer-hint" role="status">
+          <p>클릭하면 현재 문서를 떠나지 않고 관련 문서를 엽니다.</p>
+          <button
+            aria-label="안내 닫기"
+            className="explorer-hint__dismiss"
+            onClick={() => setShowFirstCardHint(false)}
+            type="button"
+          >
+            <X size={14} aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
       {hoveredCard ? (
         <PreviewCardView
           card={hoveredCard}
@@ -354,14 +418,20 @@ function PreviewCardView({
         ) : (
           <Pin size={15} aria-hidden="true" />
         )}
-        <Link href={`/documents/${card.slug}`}>{card.title}</Link>
         <Link
-          aria-label="해당 문서로 이동"
+          aria-label={`${card.title} 문서로 이동 (카드 닫힘)`}
+          href={`/documents/${card.slug}`}
+          title="이 문서로 이동합니다(카드가 닫힙니다)"
+        >
+          {card.title}
+        </Link>
+        <Link
+          aria-label={`${card.title} 새 탭에서 열기`}
           className="preview-card__open"
           href={`/documents/${card.slug}`}
           rel="noopener noreferrer"
           target="_blank"
-          title="새 탭에서 해당 문서 열기"
+          title="새 탭에서 이 문서 열기(카드는 유지됨)"
         >
           <ExternalLink size={15} aria-hidden="true" />
         </Link>

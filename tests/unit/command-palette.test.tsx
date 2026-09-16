@@ -65,6 +65,32 @@ describe("CommandPalette", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("shows a searching state instead of a false empty result while waiting", async () => {
+    getSearchLandingAction.mockResolvedValue(emptyLanding);
+    searchAction.mockResolvedValue([
+      {
+        documentId: "doc-1",
+        slug: "하네스",
+        title: "하네스",
+        summary: "",
+        matchedAlias: null,
+        matchedContext: null,
+      },
+    ]);
+
+    render(<CommandPalette />);
+    fireEvent.click(screen.getByRole("button", { name: "문서 검색" }));
+    const input = await screen.findByPlaceholderText("제목, 별칭, 본문으로 검색");
+
+    fireEvent.change(input, { target: { value: "하네스" } });
+
+    expect(screen.getByText("검색 중…")).toBeInTheDocument();
+    expect(screen.queryByText("검색 결과가 없습니다.")).not.toBeInTheDocument();
+
+    await screen.findByRole("button", { name: /하네스/ });
+    expect(screen.queryByText("검색 중…")).not.toBeInTheDocument();
+  });
+
   it("navigates results with the keyboard and selects with Enter", async () => {
     getSearchLandingAction.mockResolvedValue(emptyLanding);
     searchAction.mockResolvedValue([

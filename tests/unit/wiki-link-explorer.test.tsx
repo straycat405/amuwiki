@@ -42,18 +42,21 @@ describe("WikiLinkExplorer", () => {
     expect(await screen.findByLabelText("문명 6 고정 카드")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith("/api/documents/preview?slug=%EB%AC%B8%EB%AA%85-6");
     expect(screen.getByText("문명 시리즈의 전략 게임입니다.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "해당 문서로 이동" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "문명 6 새 탭에서 열기" })).toHaveAttribute(
       "href",
       "/documents/문명-6",
     );
-    expect(screen.getByRole("link", { name: "해당 문서로 이동" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "문명 6 새 탭에서 열기" })).toHaveAttribute(
       "target",
       "_blank",
     );
+    expect(
+      screen.getByRole("link", { name: "문명 6 문서로 이동 (카드 닫힘)" }),
+    ).toHaveAttribute("href", "/documents/문명-6");
   });
 
-  it("allows up to ten pinned cards", async () => {
-    const links = Array.from({ length: 10 }, (_, index) => `문서 ${index + 1}`);
+  it("caps pinned cards at three and collapses the oldest into the exploration path", async () => {
+    const links = Array.from({ length: 4 }, (_, index) => `문서 ${index + 1}`);
     const fetchMock = vi.fn().mockImplementation(async (input: string) => {
       const slug = new URL(input, "http://localhost").searchParams.get("slug") ?? "";
       return {
@@ -77,10 +80,21 @@ describe("WikiLinkExplorer", () => {
         clientX: 120 + index,
         clientY: 180,
       });
-      expect(await screen.findByLabelText(`${title} 고정 카드`)).toBeInTheDocument();
+      await screen.findByText(new RegExp(`^${title}$`));
     }
 
-    expect(screen.getAllByLabelText(/고정 카드$/)).toHaveLength(10);
-    expect(screen.queryByText("고정 카드는 최대 10개까지 열 수 있습니다.")).not.toBeInTheDocument();
+    // 4번째 카드를 열면 가장 먼저 열었던 "문서 1"은 카드로 남지 않고 경로로 접힌다.
+    expect(screen.getAllByLabelText(/고정 카드$/)).toHaveLength(3);
+    expect(screen.queryByLabelText("문서 1 고정 카드")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("navigation", { name: "탐색 경로" }),
+    ).toHaveTextContent("현재 문서");
+    const trailButton = screen.getByRole("button", { name: "문서 1" });
+    expect(trailButton).toBeInTheDocument();
+
+    // 경로에 접힌 카드를 다시 클릭하면 카드로 재탐색할 수 있다.
+    fireEvent.click(trailButton);
+    expect(await screen.findByLabelText("문서 1 고정 카드")).toBeInTheDocument();
+    expect(screen.getAllByLabelText(/고정 카드$/)).toHaveLength(3);
   });
 });

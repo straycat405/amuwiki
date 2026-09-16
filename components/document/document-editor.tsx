@@ -25,6 +25,15 @@ type EditorDocument = {
   version: number;
 };
 
+type SaveState = "saving" | "local" | "server" | "new";
+
+const SAVE_STATE_LABEL: Record<SaveState, string> = {
+  saving: "저장 중",
+  local: "이 브라우저에 임시 저장됨",
+  server: "서버에 저장됨",
+  new: "아직 저장 전",
+};
+
 type DocumentEditorProps = {
   action: (
     state: DocumentActionState,
@@ -58,6 +67,8 @@ export function DocumentEditor({
   const [hydrated, setHydrated] = useState(false);
   const [draftDocumentId, setDraftDocumentId] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [documentAtLastSync, setDocumentAtLastSync] = useState(initialDocument);
+  const [showRestoredNotice, setShowRestoredNotice] = useState(false);
   const savedSnapshot = useRef("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -80,8 +91,15 @@ export function DocumentEditor({
       window.localStorage.removeItem(storageKey);
     }
 
+    const changedFromServer =
+      restoredDocument &&
+      (restoredDocument.title !== initialDocument.title ||
+        restoredDocument.summary !== initialDocument.summary ||
+        restoredDocument.bodyMarkdown !== initialDocument.bodyMarkdown);
+
     const timer = window.setTimeout(() => {
       if (restoredDocument) setDocument(restoredDocument);
+      if (changedFromServer) setShowRestoredNotice(true);
       setHydrated(true);
     }, 0);
     return () => window.clearTimeout(timer);
@@ -98,12 +116,44 @@ export function DocumentEditor({
     return () => window.clearTimeout(timer);
   }, [currentVersion, document, hydrated, storageKey]);
 
+  // useActionState는 서버 액션이 끝날 때만 state를 새 객체로 바꿔준다. 렌더 중에
+  // 직전 렌더의 state와 비교해 "방금 성공했다"를 판단하면, useEffect에서 처리할 때
+  // 생기는 한 프레임짜리 낡은 저장 상태 표시를 피할 수 있다.
+  const [lastHandledState, setLastHandledState] = useState(initialState);
+  if (state !== lastHandledState) {
+    setLastHandledState(state);
+    if (state.status === "success") {
+      setDocumentAtLastSync(document);
+      setShowRestoredNotice(false);
+    }
+  }
+
   useEffect(() => {
     if (state.status !== "success") return;
     savedSnapshot.current = JSON.stringify({ ...document, version: currentVersion });
     window.localStorage.removeItem(storageKey);
     if (state.redirectTo) router.push(state.redirectTo as Route);
   }, [currentVersion, document, router, state, storageKey]);
+
+  const discardRestoredDraft = useCallback(() => {
+    window.localStorage.removeItem(storageKey);
+    setDocument(initialDocument);
+    setShowRestoredNotice(false);
+  }, [initialDocument, storageKey]);
+
+  const isDirty =
+    hydrated &&
+    (document.title !== documentAtLastSync.title ||
+      document.summary !== documentAtLastSync.summary ||
+      document.bodyMarkdown !== documentAtLastSync.bodyMarkdown);
+
+  const saveState: SaveState = pending
+    ? "saving"
+    : isDirty
+      ? "local"
+      : mode === "create" && state.status !== "success"
+        ? "new"
+        : "server";
 
   const insertAtCursor = useCallback((snippet: string, cursorOffset = snippet.length) => {
     const textarea = textareaRef.current;
@@ -228,8 +278,15 @@ export function DocumentEditor({
       ) : null}
       <header className="document-editor__toolbar">
         <span>{mode === "create" ? "새 문서" : "문서 편집"}</span>
-        <div className="document-editor__status" aria-live="polite">
-          {uploadStatus ?? state.message}
+        <div className="document-editor__status-group">
+          <span className={`save-state save-state--${saveState}`} aria-live="polite">
+            {SAVE_STATE_LABEL[saveState]}
+          </span>
+          {uploadStatus ?? state.message ? (
+            <span className="document-editor__status" aria-live="polite">
+              {uploadStatus ?? state.message}
+            </span>
+          ) : null}
         </div>
         <input
           ref={fileInputRef}
@@ -281,6 +338,14 @@ export function DocumentEditor({
       </header>
       <div className="document-editor__panes">
         <section className="editor-pane" aria-label="Markdown 편집">
+          {showRestoredNotice ? (
+            <p className="document-editor__restored-notice" role="status">
+              <span>이전에 작성하던 임시 내용을 이 브라우저에서 불러왔습니다.</span>
+              <button onClick={discardRestoredDraft} type="button">
+                비우고 새로 시작
+              </button>
+            </p>
+          ) : null}
           <label className="visually-hidden" htmlFor="document-title">
             제목
           </label>
@@ -324,7 +389,7 @@ export function DocumentEditor({
               setDocument({ ...document, bodyMarkdown: event.target.value })
             }
             onPaste={handlePaste}
-            placeholder="Markdown으로 기록하세요. 이미지를 붙여넣거나 위 버튼으로 올릴 수 있습니다."
+            placeholder="제목을 쓰고 [[관련 문서]]로 연결해 보세요. 이미지를 붙여넣거나 위 버튼으로 올릴 수 있습니다."
             ref={textareaRef}
             value={document.bodyMarkdown}
           />

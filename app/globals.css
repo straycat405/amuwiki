@@ -357,9 +357,65 @@ button {
 }
 
 .empty-document h1 {
-  margin: var(--space-5) 0 var(--space-5);
+  margin: var(--space-5) 0 var(--space-3);
   font-size: 1.08rem;
   letter-spacing: -0.025em;
+}
+
+.empty-document__lede {
+  max-width: 44ch;
+  margin: 0 0 var(--space-5);
+  color: var(--color-muted);
+  font: 450 0.92rem/1.6 var(--font-ui);
+}
+
+.empty-document__lede code {
+  color: var(--color-accent);
+}
+
+.empty-document__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.empty-document__example {
+  display: grid;
+  gap: var(--space-3);
+  width: min(420px, 100%);
+}
+
+.example-card {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--space-4);
+  text-align: left;
+  font: 450 0.85rem/1.5 var(--font-document);
+}
+
+.example-card--popup {
+  margin-left: var(--space-6);
+  border-style: solid;
+  box-shadow: var(--shadow-sm);
+}
+
+.example-card__label {
+  margin: 0 0 var(--space-2);
+  color: var(--color-subtle);
+  font: 650 0.7rem/1 var(--font-ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.example-card p + p {
+  margin-top: var(--space-2);
+}
+
+.example-card__link {
+  color: var(--color-accent);
 }
 
 .primary-button {
@@ -1290,9 +1346,55 @@ button {
   font: 650 0.84rem/1 var(--font-ui);
 }
 
+.document-editor__status-group {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.save-state {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.save-state--server {
+  color: var(--color-accent);
+}
+
 .document-editor__status {
+  overflow: hidden;
   color: var(--color-muted);
   font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-editor__restored-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: 450 0.86rem/1.5 var(--font-ui);
+}
+
+.document-editor__restored-notice button {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .document-editor__panes {
@@ -1575,6 +1677,92 @@ button {
 
 .wiki-link-explorer {
   position: relative;
+}
+
+.exploration-trail {
+  position: fixed;
+  z-index: 55;
+  top: calc(var(--header-height) + var(--space-3));
+  right: var(--space-5);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: min(420px, calc(100vw - 24px));
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: 0 8px 24px rgb(20 28 38 / 12%);
+  font: 500 0.8rem/1.3 var(--font-ui);
+}
+
+.exploration-trail__root {
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.exploration-trail__step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.exploration-trail__arrow {
+  color: var(--color-subtle);
+}
+
+.exploration-trail__item {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--color-accent);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.exploration-trail__item:hover {
+  opacity: 0.8;
+}
+
+.explorer-hint {
+  position: fixed;
+  z-index: 62;
+  left: 50%;
+  bottom: var(--space-5);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: min(420px, calc(100vw - 24px));
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: 0 12px 32px rgb(20 28 38 / 20%);
+  font: 500 0.85rem/1.4 var(--font-ui);
+}
+
+.explorer-hint p {
+  margin: 0;
+}
+
+.explorer-hint__dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  border: none;
+  background: none;
+  padding: var(--space-1);
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.explorer-hint__dismiss:hover {
+  opacity: 1;
 }
 
 .preview-card {
@@ -1949,7 +2137,8 @@ button {
   list-style: none;
 }
 
-.command-palette__empty {
+.command-palette__empty,
+.command-palette__loading {
   margin: 0;
   padding: var(--space-5);
   color: var(--color-muted);
