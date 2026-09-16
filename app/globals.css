@@ -1581,7 +1581,8 @@ button {
   position: fixed;
   z-index: 60;
   width: min(360px, calc(100vw - 24px));
-  overflow: hidden;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);

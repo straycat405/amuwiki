@@ -8,6 +8,7 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -42,7 +43,8 @@ type WikiLinkExplorerProps = {
 const CLOSE_DELAY_MS = 150;
 const CARD_WIDTH = 360;
 const CARD_OFFSET = 16;
-const MAX_PINNED_CARDS = 3;
+const VIEWPORT_MARGIN = 12;
+const MAX_PINNED_CARDS = 10;
 
 function linkSlug(target: EventTarget | null): string | null {
   if (!(target instanceof Element)) return null;
@@ -59,8 +61,28 @@ function linkSlug(target: EventTarget | null): string | null {
 
 function cardPosition(x: number, y: number): CardPosition {
   return {
-    x: Math.max(12, Math.min(x + CARD_OFFSET, window.innerWidth - CARD_WIDTH - 12)),
-    y: Math.max(12, Math.min(y + CARD_OFFSET, window.innerHeight - 180)),
+    x: Math.max(
+      VIEWPORT_MARGIN,
+      Math.min(x + CARD_OFFSET, window.innerWidth - CARD_WIDTH - VIEWPORT_MARGIN),
+    ),
+    y: Math.max(VIEWPORT_MARGIN, y + CARD_OFFSET),
+  };
+}
+
+function positionWithinViewport(
+  position: CardPosition,
+  width: number,
+  height: number,
+): CardPosition {
+  return {
+    x: Math.max(
+      VIEWPORT_MARGIN,
+      Math.min(position.x, window.innerWidth - width - VIEWPORT_MARGIN),
+    ),
+    y: Math.max(
+      VIEWPORT_MARGIN,
+      Math.min(position.y, window.innerHeight - height - VIEWPORT_MARGIN),
+    ),
   };
 }
 
@@ -244,6 +266,11 @@ export function WikiLinkExplorer({
           kind="hover"
           onEnter={clearCloseTimer}
           onLeave={closePreview}
+          onPositionChange={(position) =>
+            setHoveredCard((card) =>
+              card?.id === hoveredCard.id ? { ...card, position } : card,
+            )
+          }
         />
       ) : null}
       {pinnedCards.map((card) => (
@@ -256,6 +283,11 @@ export function WikiLinkExplorer({
           onDragEnd={stopDrag}
           onDragMove={dragCard}
           onDragStart={(event) => startDrag(event, card)}
+          onPositionChange={(position) =>
+            setPinnedCards((cards) =>
+              cards.map((item) => (item.id === card.id ? { ...item, position } : item)),
+            )
+          }
         />
       ))}
     </div>
@@ -272,6 +304,7 @@ function PreviewCardView({
   onDragStart,
   onEnter,
   onLeave,
+  onPositionChange,
 }: {
   ask?: ReactNode;
   card: PreviewCard;
@@ -282,13 +315,27 @@ function PreviewCardView({
   onDragStart?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
   onEnter?: () => void;
   onLeave?: () => void;
+  onPositionChange?: (position: CardPosition) => void;
 }) {
+  const cardRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    const element = cardRef.current;
+    if (!element || !onPositionChange) return;
+    const { width, height } = element.getBoundingClientRect();
+    const position = positionWithinViewport(card.position, width, height);
+    if (position.x !== card.position.x || position.y !== card.position.y) {
+      onPositionChange(position);
+    }
+  }, [card.position, onPositionChange]);
+
   return (
     <section
       aria-label={`${card.title} ${kind === "pinned" ? "고정 카드" : "미리보기"}`}
       className={`preview-card preview-card--${kind}`}
       onPointerEnter={onEnter}
       onPointerLeave={onLeave}
+      ref={cardRef}
       style={{ left: card.position.x, top: card.position.y }}
     >
       <header className="preview-card__header">

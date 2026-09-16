@@ -51,4 +51,36 @@ describe("WikiLinkExplorer", () => {
       "_blank",
     );
   });
+
+  it("allows up to ten pinned cards", async () => {
+    const links = Array.from({ length: 10 }, (_, index) => `문서 ${index + 1}`);
+    const fetchMock = vi.fn().mockImplementation(async (input: string) => {
+      const slug = new URL(input, "http://localhost").searchParams.get("slug") ?? "";
+      return {
+        ok: true,
+        json: async () => ({ ...preview, slug, title: decodeURIComponent(slug) }),
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <WikiLinkExplorer
+        markdown={links.map((title) => `[[${title}]]`).join(" ")}
+        wikiLinkResolutions={Object.fromEntries(
+          links.map((title) => [title, { href: `/documents/${encodeURIComponent(title)}`, title }]),
+        )}
+      />,
+    );
+
+    for (const [index, title] of links.entries()) {
+      fireEvent.click(screen.getByRole("link", { name: title }), {
+        clientX: 120 + index,
+        clientY: 180,
+      });
+      expect(await screen.findByLabelText(`${title} 고정 카드`)).toBeInTheDocument();
+    }
+
+    expect(screen.getAllByLabelText(/고정 카드$/)).toHaveLength(10);
+    expect(screen.queryByText("고정 카드는 최대 10개까지 열 수 있습니다.")).not.toBeInTheDocument();
+  });
 });
