@@ -24,6 +24,13 @@ export function frontmatterAliases(data: Record<string, unknown>): string[] {
   return [];
 }
 
+export function frontmatterUnknownFields(data: Record<string, unknown>): Record<string, unknown> {
+  const unknownFields = { ...data };
+  delete unknownFields.title;
+  delete unknownFields.aliases;
+  return unknownFields;
+}
+
 export function frontmatterTitle(data: Record<string, unknown>): string | null {
   const title = data.title;
   return typeof title === "string" && title.trim() ? title.trim() : null;
