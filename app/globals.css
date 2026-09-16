@@ -229,14 +229,27 @@ button {
   list-style: none;
 }
 
+.sidebar-group-label {
+  margin: var(--space-4) 0 var(--space-2);
+  color: var(--color-muted);
+  font: 600 0.7rem/1 var(--font-ui);
+  letter-spacing: 0.04em;
+}
+
+.sidebar-group:first-child .sidebar-group-label {
+  margin-top: 0;
+}
+
 .sidebar-documents {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-1);
 }
 
 .sidebar-documents li {
   display: flex;
   align-items: center;
+  min-width: 0;
   border-radius: var(--radius-sm);
 }
 
