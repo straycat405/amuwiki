@@ -19,6 +19,7 @@ my-wiki/
 ├── AGENTS.md                     ← Codex 작업 진입점
 ├── CLAUDE.md                     ← Claude Code 작업 진입점
 ├── docs/
+│   ├── INDEX.md                  ← 작업 유형별 필독 문서 라우터, 문서 상태(현재 사실/결정/가이드/제안/보관) 정의
 │   ├── architecture.md           ← 구성 요소, 의존 방향, 주요 데이터 흐름
 │   ├── business-rules.md         ← 문서·개념·탐색·가져오기의 제품 규칙
 │   ├── security.md               ← 인증, 사용자 격리, 비공개 데이터 정책
@@ -26,18 +27,20 @@ my-wiki/
 │   ├── engineering-notes.md      ← 재발하기 쉬운 문제와 검증 방법
 │   ├── operations.md             ← 설치, 실행, 데이터베이스, 배포 절차
 │   ├── contracts.md              ← 현재 외부 HTTP 인터페이스
-│   ├── 아무위키-제품-기술-설계.md ← 전체 제품 범위의 원본 설계 자료
-│   ├── 개발-인수인계.md          ← 과거 구현·수동 검증 기록
+│   ├── 상용화-대비-교체-지점.md  ← 상용화·다중 사용자 전환 시 교체할 지점
+│   ├── archive/                  ← 보관 문서(현재 사실 아님): 원본 설계서, 개발 인수인계 기록
 │   └── tracking/
-│       ├── status.md             ← 구현·검증된 범위와 남은 순서
+│       ├── status.md             ← 지금 시점의 구현 범위(서술형 이력 없음, 이력은 git log 참고)
 │       ├── findings.md           ← 지금 해결하지 못한 실제 문제
+│       ├── proposals/            ← 검토 중이며 아직 채택되지 않은 제안 문서
 │       └── decisions/
 │           ├── index.md          ← 결정 기록 목록
 │           ├── 0001-database-and-markdown.md          ← DB 원본과 Markdown 이식성 결정
 │           ├── 0002-private-multitenant-foundation.md ← 비공개·사용자별 서비스 기반 결정
 │           ├── 0003-document-as-concept.md            ← 문서를 개념 단위로 삼은 결정
 │           ├── 0004-contextual-card-exploration.md    ← 현재 문맥의 카드 탐색 결정
-│           └── 0005-explicit-server-save.md           ← 임시 저장과 서버 저장 분리 결정
+│           ├── 0005-explicit-server-save.md           ← 임시 저장과 서버 저장 분리 결정
+│           └── 0006-synchronous-export.md             ← 전체 내보내기를 동기 방식으로 생성하는 결정
 ├── app/
 │   └── AGENTS.md                 ← 페이지, 서버 작업, HTTP 진입점 경계
 ├── components/
@@ -60,6 +63,7 @@ my-wiki/
 
 ## 작업 전에 확인할 것
 
+- 작업 유형에 따라 추가로 읽을 문서는 `docs/INDEX.md`에서 먼저 확인한다. 이 문서는 어떤 문서가 지금 시점의 사실이고 어떤 문서가 제안·보관 상태인지도 정의한다.
 - 모든 변경 전에 `docs/standards.md`와 `docs/engineering-notes.md`, 변경 영역의 `AGENTS.md`를 읽는다.
 - 인증·공개·게시 기능을 바꾸기 전에는 사용자별 격리와 비공개 기본값이 유지되는지 먼저 확인한다.
 - 스키마나 데이터 수명주기를 바꾸기 전에는 순방향 마이그레이션인지, 기존 문서와 첨부파일을 보존하는지 확인한다.

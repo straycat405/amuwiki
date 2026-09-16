@@ -1,8 +1,10 @@
 # UX·정보구조 개선 작업 지시 프롬프트
 
+> **상태: 제안 중.** 아직 실행되지 않았다. 실행하면 이 문서는 `docs/archive/`로 옮긴다.
+
 아래 리포트를 근거로 아무위키의 첫 사용 경험과 핵심 연결 탐색 경험을 개선해 주세요.
 
-- 기준 리포트: `docs/tracking/ux-ia-diagnostic-report-2026-09-16.md`
+- 기준 리포트: `docs/tracking/proposals/ux-ia-diagnostic-report-2026-09-16.md`
 - 제품 규칙: `docs/business-rules.md`
 - 변경 전 반드시 읽을 문서: 루트 `AGENTS.md`, `docs/standards.md`, `docs/engineering-notes.md`, 변경 영역의 `AGENTS.md`
 

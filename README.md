@@ -97,7 +97,7 @@ npm run build
 
 | 문서 | 내용 |
 |---|---|
-| [`docs/아무위키-제품-기술-설계.md`](docs/아무위키-제품-기술-설계.md) | 전체 제품 범위의 원본 설계 |
+| [`docs/INDEX.md`](docs/INDEX.md) | 작업 유형별로 먼저 읽을 문서를 안내하는 라우터 |
 | [`docs/architecture.md`](docs/architecture.md) | 구성 요소, 의존 방향, 주요 데이터 흐름 |
 | [`docs/business-rules.md`](docs/business-rules.md) | 문서·개념·탐색·가져오기의 제품 규칙 |
 | [`docs/security.md`](docs/security.md) | 인증, 사용자 격리, 비공개 데이터 정책 |
@@ -107,6 +107,7 @@ npm run build
 | [`docs/tracking/status.md`](docs/tracking/status.md) | 지금까지 구현·검증된 범위와 남은 순서 |
 | [`docs/tracking/findings.md`](docs/tracking/findings.md) | 지금 해결하지 못한 실제 문제 |
 | [`docs/tracking/decisions/`](docs/tracking/decisions/index.md) | 채택된 설계 결정과 그 이유 |
+| [`docs/archive/`](docs/archive/) | 원본 설계서·인수인계 기록 등 보관 문서(현재 사실 아님) |
 
 ## AI 코딩 에이전트로 작업하기
 
@@ -126,7 +127,7 @@ npm run build
 
 - **배포처 미정** — 로컬 `next dev` + 로컬 Supabase로만 검증되어 있습니다. 다른 기기에서 쓰려면 실제
   호스팅이 필요합니다. GitHub Actions 기반 CI/CD 제안은
-  [`docs/tracking/ci-cd-deployment-proposal.md`](docs/tracking/ci-cd-deployment-proposal.md)에
+  [`docs/tracking/proposals/ci-cd-deployment-proposal.md`](docs/tracking/proposals/ci-cd-deployment-proposal.md)에
   있지만 아직 채택되지 않았습니다.
 - **백업·복구 리허설 없음** — 정기 논리 백업과 복구 절차가 아직 없습니다.
 - **가져오기 스테이징 정리 없음** — ZIP 원본·분석 보고서가 7일 뒤 삭제되도록 설계되어 있지만, 실제로

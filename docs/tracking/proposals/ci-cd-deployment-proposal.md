@@ -1,5 +1,7 @@
 # GitHub Actions 중심 CI/CD 배포 전략 (제안, 미채택)
 
+> **상태: 제안 중.** 코드나 다른 문서의 근거로 인용하지 않는다. 채택되면 `docs/tracking/decisions/`에 ADR을 추가하고 이 문서는 `docs/archive/`로 옮긴다.
+
 > 2026-09-16 작성. 아직 결정된 사항이 아니다. 실행 파일(`.github/workflows/*.yml`)은 만들지 않았고,
 > 아래 방향에 동의한 뒤 별도 작업으로 구현한다. 전체 시각 자료는
 > [claude.ai 아티팩트](https://claude.ai/artifact/6pYhfGfZ4fRNjDfEgGY8Ps)에도 있다(외부 링크, 만료·접근 변경 가능성 있음 — 이 파일이 원본 기록).

@@ -1,5 +1,7 @@
 # 참고 사이트 조사 결과와 인터페이스 개선 제안 (제안, 미채택)
 
+> **상태: 제안 중.** 코드나 다른 문서의 근거로 인용하지 않는다. 채택되면 `docs/tracking/decisions/`에 ADR을 추가하고 이 문서는 `docs/archive/`로 옮긴다.
+
 > 2026-09-16 작성. 나무위키(namu.wiki)와 한국어 위키백과(ko.wikipedia.org)의 실제 페이지를
 > 직접 열어 확인한 뒤 정리한 제안이다. 결정된 사항이 아니며, 아래 중 무엇을 구현할지는
 > 별도로 정한다. 시각 자료는 [claude.ai 아티팩트](https://claude.ai/artifact/Es5NW5oVZeMwuVAm3W1qeZ)에도
