@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import Link from "next/link";
 
 import { RecentSearchChips } from "@/components/search/recent-search-chips";
+import { SearchResultContext } from "@/components/search/search-result-context";
 import { listRecentViews } from "@/features/history/data";
 import {
   listRecentSearches,
@@ -47,7 +48,7 @@ export default async function SearchPage({
             type="text"
             name="q"
             defaultValue={query}
-            placeholder="문서 제목이나 별칭으로 검색"
+            placeholder="제목, 별칭, 본문으로 검색"
             aria-label="검색어"
           />
           <button type="submit" className="primary-button">
@@ -73,7 +74,15 @@ export default async function SearchPage({
                           별칭: {result.matchedAlias}
                         </span>
                       ) : null}
-                      {result.summary ? <p>{result.summary}</p> : null}
+                      {result.matchedContext ? (
+                        <SearchResultContext
+                          className="search-view__match-context"
+                          context={result.matchedContext}
+                          query={trimmedQuery}
+                        />
+                      ) : result.summary ? (
+                        <p>{result.summary}</p>
+                      ) : null}
                     </Link>
                   </li>
                 ))}

@@ -4,6 +4,7 @@ export type SearchResult = {
   title: string;
   summary: string;
   matchedAlias: string | null;
+  matchedContext: string | null;
 };
 
 export type RecentSearch = {

@@ -18,6 +18,8 @@ docker cp supabase/tests/document_lifecycle.sql supabase_db_amuwiki:/tmp/documen
 docker exec supabase_db_amuwiki psql -U postgres -d postgres -f /tmp/document_lifecycle.sql
 docker cp supabase/tests/document_wiki_links.sql supabase_db_amuwiki:/tmp/document_wiki_links.sql
 docker exec supabase_db_amuwiki psql -U postgres -d postgres -f /tmp/document_wiki_links.sql
+docker cp supabase/tests/search.sql supabase_db_amuwiki:/tmp/search.sql
+docker exec supabase_db_amuwiki psql -U postgres -d postgres -f /tmp/search.sql
 docker cp supabase/tests/lint_suggestions.sql supabase_db_amuwiki:/tmp/lint_suggestions.sql
 docker exec supabase_db_amuwiki psql -U postgres -d postgres -f /tmp/lint_suggestions.sql
 docker cp supabase/tests/ai_settings.sql supabase_db_amuwiki:/tmp/ai_settings.sql

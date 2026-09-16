@@ -41,6 +41,7 @@ describe("CommandPalette", () => {
         title: "문명 6",
         summary: "전략 게임",
         matchedAlias: null,
+        matchedContext: "…문명 6 전략 게임의 상세 기록입니다.",
       },
     ]);
 
@@ -49,12 +50,13 @@ describe("CommandPalette", () => {
     fireEvent.click(screen.getByRole("button", { name: "문서 검색" }));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByPlaceholderText("문서 제목이나 별칭으로 검색"), {
+    fireEvent.change(screen.getByPlaceholderText("제목, 별칭, 본문으로 검색"), {
       target: { value: "문명" },
     });
 
     const resultButton = await screen.findByRole("button", { name: /문명 6/ });
     expect(searchAction).toHaveBeenCalledWith("문명");
+    expect(screen.getByText("문명").tagName).toBe("MARK");
 
     fireEvent.click(resultButton);
 
@@ -72,6 +74,7 @@ describe("CommandPalette", () => {
         title: "문서 1",
         summary: "",
         matchedAlias: null,
+        matchedContext: null,
       },
       {
         documentId: "doc-2",
@@ -79,12 +82,13 @@ describe("CommandPalette", () => {
         title: "문서 2",
         summary: "",
         matchedAlias: null,
+        matchedContext: null,
       },
     ]);
 
     render(<CommandPalette />);
     fireEvent.click(screen.getByRole("button", { name: "문서 검색" }));
-    const input = await screen.findByPlaceholderText("문서 제목이나 별칭으로 검색");
+    const input = await screen.findByPlaceholderText("제목, 별칭, 본문으로 검색");
     fireEvent.change(input, { target: { value: "문서" } });
     await screen.findByRole("button", { name: /문서 1/ });
 
@@ -92,6 +96,25 @@ describe("CommandPalette", () => {
     fireEvent.keyDown(input, { key: "Enter" });
 
     expect(push).toHaveBeenCalledWith("/documents/문서-2");
+  });
+
+  it("closes when the user clicks outside the search panel", async () => {
+    getSearchLandingAction.mockResolvedValue(emptyLanding);
+
+    render(<CommandPalette />);
+    fireEvent.click(screen.getByRole("button", { name: "문서 검색" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(
+      document.querySelector(".command-palette-overlay")?.parentElement,
+    ).toBe(document.body);
+    expect(document.body).toHaveClass("command-palette-open");
+    expect(document.documentElement).toHaveClass("command-palette-open");
+
+    fireEvent.pointerDown(document.querySelector(".command-palette-backdrop")!);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.body).not.toHaveClass("command-palette-open");
+    expect(document.documentElement).not.toHaveClass("command-palette-open");
   });
 
   it("removes a recent search entry without navigating", async () => {
@@ -109,6 +132,9 @@ describe("CommandPalette", () => {
     render(<CommandPalette />);
     fireEvent.click(screen.getByRole("button", { name: "문서 검색" }));
 
+    expect(await screen.findByRole("button", { name: "문명" })).toHaveClass(
+      "command-palette__recent-search",
+    );
     const removeButton = await screen.findByRole("button", {
       name: "문명 최근 검색어 삭제",
     });

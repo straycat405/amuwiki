@@ -7,7 +7,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: {
     default: "아무위키",
-    template: "%s · 아무위키",
+    template: "%s - 아무위키",
   },
   description: "아무거나 기록하고 문맥 안에서 탐색하는 개인 위키",
 };

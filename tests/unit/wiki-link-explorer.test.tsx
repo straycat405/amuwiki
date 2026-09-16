@@ -42,5 +42,13 @@ describe("WikiLinkExplorer", () => {
     expect(await screen.findByLabelText("문명 6 고정 카드")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith("/api/documents/preview?slug=%EB%AC%B8%EB%AA%85-6");
     expect(screen.getByText("문명 시리즈의 전략 게임입니다.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "해당 문서로 이동" })).toHaveAttribute(
+      "href",
+      "/documents/문명-6",
+    );
+    expect(screen.getByRole("link", { name: "해당 문서로 이동" })).toHaveAttribute(
+      "target",
+      "_blank",
+    );
   });
 });

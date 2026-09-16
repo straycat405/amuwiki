@@ -1,6 +1,6 @@
 "use client";
 
-import { GripVertical, Pin, X } from "lucide-react";
+import { ExternalLink, GripVertical, Pin, X } from "lucide-react";
 import Link from "next/link";
 import {
   type MouseEvent as ReactMouseEvent,
@@ -308,6 +308,16 @@ function PreviewCardView({
           <Pin size={15} aria-hidden="true" />
         )}
         <Link href={`/documents/${card.slug}`}>{card.title}</Link>
+        <Link
+          aria-label="해당 문서로 이동"
+          className="preview-card__open"
+          href={`/documents/${card.slug}`}
+          rel="noopener noreferrer"
+          target="_blank"
+          title="새 탭에서 해당 문서 열기"
+        >
+          <ExternalLink size={15} aria-hidden="true" />
+        </Link>
         {onClose ? (
           <button aria-label="고정 카드 닫기" className="preview-card__close" onClick={onClose} type="button">
             <X size={16} aria-hidden="true" />

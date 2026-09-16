@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -15,8 +16,21 @@ import { recordDocumentView } from "@/features/history/data";
 import { requireOwner } from "@/lib/auth/require-owner";
 import { decodeDocumentSlug } from "@/lib/markdown/slug";
 import { createClient } from "@/lib/supabase/server";
-import { listAnnotations } from "@/features/annotations/data";
-import { AnnotationWorkspace } from "@/components/annotation/annotation-workspace";
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/documents/[slug]">): Promise<Metadata> {
+  const { slug: encodedSlug } = await params;
+  const slug = decodeDocumentSlug(encodedSlug);
+  if (!slug) return {};
+
+  const user = await requireOwner();
+  const supabase = await createClient();
+  const document = await getDocumentBySlug(supabase, user.id, slug);
+  if (!document) return {};
+
+  return { title: document.title };
+}
 
 export default async function DocumentPage({
   params,
@@ -29,11 +43,10 @@ export default async function DocumentPage({
   const document = await getDocumentBySlug(supabase, user.id, slug);
   if (!document) notFound();
   void recordDocumentView(supabase, document.id);
-  const [wikiLinkResolutions, backlinks, aiSettings, annotations] = await Promise.all([
+  const [wikiLinkResolutions, backlinks, aiSettings] = await Promise.all([
     resolveWikiLinkTargets(supabase, user.id, document.body_markdown),
     listBacklinks(supabase, user.id, document.id),
     getAiSettings(supabase, user.id),
-    listAnnotations(supabase, user.id, document.id),
   ]);
 
   return (
@@ -62,9 +75,7 @@ export default async function DocumentPage({
             />
           </div>
         </header>
-        <AnnotationWorkspace annotations={annotations} documentId={document.id} documentRevision={document.version} markdown={document.body_markdown}>
-          <WikiLinkExplorer aiEnabled={aiSettings.enabled} markdown={document.body_markdown} pageSlug={document.slug} wikiLinkResolutions={wikiLinkResolutions} />
-        </AnnotationWorkspace>
+        <WikiLinkExplorer aiEnabled={aiSettings.enabled} markdown={document.body_markdown} pageSlug={document.slug} wikiLinkResolutions={wikiLinkResolutions} />
         {backlinks.length > 0 ? (
           <section className="backlinks" aria-labelledby="backlinks-title">
             <h2 id="backlinks-title">연결된 문서</h2>

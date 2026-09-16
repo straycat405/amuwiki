@@ -29,11 +29,15 @@ select public.update_document_with_annotation_anchors(
   ))
 );
 
-select case when (select anchor_start from public.annotations where id = :'annotation_id') = 8 then 1 else 1 / 0 end;
-select case when (select status from public.annotations where id = :'annotation_id') = 'active' then 1 else 1 / 0 end;
+select anchor_start as v_anchor_start, status as v_status
+from public.annotations where id = :'annotation_id' \gset
+select case when :v_anchor_start = 8 then 1 else 1 / 0 end;
+select case when :'v_status' = 'active' then 1 else 1 / 0 end;
 
 update public.annotations set deleted_at = now() where id = :'annotation_id';
-select case when (select count(*) from public.annotations where id = :'annotation_id' and deleted_at is not null) = 1 then 1 else 1 / 0 end;
+select count(*) as v_deleted_count
+from public.annotations where id = :'annotation_id' and deleted_at is not null \gset
+select case when :v_deleted_count = 1 then 1 else 1 / 0 end;
 
 rollback;
 

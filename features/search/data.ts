@@ -9,6 +9,8 @@ type SearchDocumentsRow = {
   title: string;
   summary: string;
   matched_alias: string | null;
+  rank_tier: number;
+  matched_context: string | null;
 };
 
 export async function searchDocuments(
@@ -31,6 +33,7 @@ export async function searchDocuments(
     title: row.title,
     summary: row.summary,
     matchedAlias: row.matched_alias,
+    matchedContext: row.matched_context,
   }));
 }
 

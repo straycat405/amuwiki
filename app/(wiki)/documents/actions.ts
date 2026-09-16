@@ -26,10 +26,6 @@ import { requireOwner } from "@/lib/auth/require-owner";
 import { getAiSettings } from "@/features/ai/data";
 import { getAiServerEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
-import { annotationCreateSchema, annotationUpdateSchema } from "@/features/annotations/schema";
-import { createAnnotation, deleteAnnotation, getAnnotation, listAnnotations, updateAnnotation } from "@/features/annotations/data";
-import { markdownToAnchorText } from "@/lib/markdown/anchor-text";
-import type { Annotation } from "@/features/annotations/types";
 
 const aiDraftSchema = z.object({
   question: z.string().trim().min(1).max(2000),
@@ -173,13 +169,11 @@ export async function updateDocumentAction(
   if (!currentDocument)
     return { status: "error", message: writeError("not-found") };
 
-  const annotations = await listAnnotations(supabase, user.id, parsedId.data);
   const result = await updateDocument(
     supabase,
     parsedId.data,
     parsed.data,
     currentDocument.frontmatter,
-    annotations,
   );
   if (!result.ok)
     return { status: "error", message: writeError(result.reason) };
@@ -192,60 +186,6 @@ export async function updateDocumentAction(
     message: "저장했습니다.",
     savedVersion: result.version,
   };
-}
-
-type AnnotationActionResult = { ok: true; annotation?: Annotation } | { ok: false; message: string };
-
-export async function createAnnotationAction(input: unknown): Promise<AnnotationActionResult> {
-  const parsed = annotationCreateSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, message: "주석 내용을 확인해주세요." };
-  const user = await requireOwner();
-  const supabase = await createClient();
-  const document = await getDocumentById(supabase, user.id, parsed.data.documentId);
-  if (!document || document.version !== parsed.data.documentRevision) return { ok: false, message: "문서가 변경되었습니다. 새로고침 후 다시 선택해주세요." };
-  const text = markdownToAnchorText(document.body_markdown);
-  if (text.slice(parsed.data.anchorStart, parsed.data.anchorEnd) !== parsed.data.quoteExact) return { ok: false, message: "선택 범위가 현재 문서와 맞지 않습니다. 다시 선택해주세요." };
-  const annotation = await createAnnotation(supabase, user.id, parsed.data);
-  if (!annotation) return { ok: false, message: "주석을 저장하지 못했습니다." };
-  revalidatePath(`/documents/${document.slug}`);
-  return { ok: true, annotation };
-}
-
-export async function updateAnnotationAction(input: unknown): Promise<AnnotationActionResult> {
-  const parsed = annotationUpdateSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, message: "주석 내용을 확인해주세요." };
-  const user = await requireOwner();
-  const supabase = await createClient();
-  const { id, ...changes } = parsed.data;
-  const existing = await getAnnotation(supabase, user.id, id);
-  if (!existing) return { ok: false, message: "주석을 찾을 수 없습니다." };
-  if (changes.anchorStart !== undefined || changes.anchorEnd !== undefined || changes.quoteExact !== undefined) {
-    const document = await getDocumentById(supabase, user.id, existing.document_id);
-    const start = changes.anchorStart ?? existing.anchor_start;
-    const end = changes.anchorEnd ?? existing.anchor_end;
-    const quote = changes.quoteExact ?? existing.quote_exact;
-    if (!document || markdownToAnchorText(document.body_markdown).slice(start, end) !== quote) return { ok: false, message: "선택 범위가 현재 문서와 맞지 않습니다. 다시 선택해주세요." };
-  }
-  const annotation = await updateAnnotation(supabase, user.id, id, {
-    ...(changes.bodyMarkdown === undefined ? {} : { body_markdown: changes.bodyMarkdown }),
-    ...(changes.colorKey === undefined ? {} : { color_key: changes.colorKey }),
-    ...(changes.status === undefined ? {} : { status: changes.status }),
-    ...(changes.anchorStart === undefined ? {} : { anchor_start: changes.anchorStart }),
-    ...(changes.anchorEnd === undefined ? {} : { anchor_end: changes.anchorEnd }),
-    ...(changes.quoteExact === undefined ? {} : { quote_exact: changes.quoteExact }),
-    ...(changes.quotePrefix === undefined ? {} : { quote_prefix: changes.quotePrefix }),
-    ...(changes.quoteSuffix === undefined ? {} : { quote_suffix: changes.quoteSuffix }),
-  });
-  if (!annotation) return { ok: false, message: "주석을 저장하지 못했습니다." };
-  return { ok: true, annotation };
-}
-
-export async function deleteAnnotationAction(id: string): Promise<AnnotationActionResult> {
-  if (!z.uuid().safeParse(id).success) return { ok: false, message: "잘못된 주석입니다." };
-  const user = await requireOwner();
-  const supabase = await createClient();
-  if (!(await deleteAnnotation(supabase, user.id, id))) return { ok: false, message: "주석을 삭제하지 못했습니다." };
-  return { ok: true };
 }
 
 export async function archiveDocumentAction(

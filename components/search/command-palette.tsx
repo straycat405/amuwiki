@@ -11,6 +11,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 
 import {
   clearRecentSearchesAction,
@@ -19,6 +20,7 @@ import {
   recordSearchAction,
   searchAction,
 } from "@/app/(wiki)/search/actions";
+import { SearchResultContext } from "@/components/search/search-result-context";
 import type { RecentView } from "@/features/history/types";
 import type { RecentSearch, SearchResult } from "@/features/search/types";
 
@@ -73,6 +75,16 @@ export function CommandPalette() {
       setRecentSearches(recentSearches);
       setRecentViews(recentViews);
     });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    document.body.classList.add("command-palette-open");
+    document.documentElement.classList.add("command-palette-open");
+    return () => {
+      document.body.classList.remove("command-palette-open");
+      document.documentElement.classList.remove("command-palette-open");
+    };
   }, [open]);
 
   useEffect(() => {
@@ -187,134 +199,192 @@ export function CommandPalette() {
         <kbd>⌘ K</kbd>
       </button>
 
-      {open ? (
-        <div
-          className="command-palette-overlay"
-          role="presentation"
-          onClick={close}
-        >
-          <div
-            className="command-palette"
-            role="dialog"
-            aria-modal="true"
-            aria-label="문서 검색"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="command-palette__input-row">
-              <Search size={18} aria-hidden="true" />
-              <input
-                ref={inputRef}
-                type="text"
-                value={query}
-                placeholder="문서 제목이나 별칭으로 검색"
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setHighlightedIndex(0);
-                }}
-                onKeyDown={handleKeyDown}
+      {open
+        ? createPortal(
+            <div className="command-palette-overlay" role="presentation">
+              <div
+                className="command-palette-backdrop"
+                aria-hidden="true"
+                onPointerDown={close}
               />
-            </div>
+              <div
+                className="command-palette"
+                role="dialog"
+                aria-modal="true"
+                aria-label="문서 검색"
+              >
+                <div className="command-palette__input-row">
+                  <Search size={18} aria-hidden="true" />
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={query}
+                    placeholder="제목, 별칭, 본문으로 검색"
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setHighlightedIndex(0);
+                    }}
+                    onKeyDown={handleKeyDown}
+                  />
+                </div>
 
-            <div className="command-palette__results">
-              {trimmedQuery && items.length === 0 ? (
-                <p className="command-palette__empty">검색 결과가 없습니다.</p>
-              ) : null}
+                <div className="command-palette__results">
+                  {trimmedQuery && items.length === 0 ? (
+                    <p className="command-palette__empty">
+                      검색 결과가 없습니다.
+                    </p>
+                  ) : null}
 
-              {!trimmedQuery && items.length === 0 ? (
-                <p className="command-palette__empty">
-                  최근 검색어나 최근 문서가 없습니다.
-                </p>
-              ) : null}
+                  {!trimmedQuery &&
+                  recentSearches.length === 0 &&
+                  recentViews.length === 0 ? (
+                    <p className="command-palette__empty">
+                      최근 검색어나 최근 문서가 없습니다.
+                    </p>
+                  ) : null}
 
-              <ul>
-                {items.map((item, index) => (
-                  <li key={item.key}>
-                    {item.type === "recent-search" && index === 0 ? (
+                  {!trimmedQuery && recentSearches.length > 0 ? (
+                    <section
+                      className="command-palette__recent-searches"
+                      aria-labelledby="recent-searches-title"
+                    >
                       <div className="command-palette__section-header">
-                        <span>최근 검색어</span>
+                        <span id="recent-searches-title">최근 검색어</span>
                         <button type="button" onClick={clearAllRecentSearches}>
                           전체 삭제
                         </button>
                       </div>
-                    ) : null}
-                    {item.type === "recent-view" &&
-                    items[index - 1]?.type !== "recent-view" ? (
-                      <div className="command-palette__section-header">
-                        <span>최근 문서</span>
-                      </div>
-                    ) : null}
-                    <button
-                      type="button"
-                      className={
-                        "command-palette__item" +
-                        (index === highlightedIndex
-                          ? " command-palette__item--active"
-                          : "")
-                      }
-                      onMouseEnter={() => setHighlightedIndex(index)}
-                      onClick={() => selectItem(item)}
-                    >
-                      {item.type === "result" ? (
-                        <>
-                          <FileText size={16} aria-hidden="true" />
-                          <span className="command-palette__item-title">
-                            {item.result.title}
-                          </span>
-                          {item.result.matchedAlias ? (
-                            <span className="command-palette__item-meta">
-                              별칭: {item.result.matchedAlias}
-                            </span>
-                          ) : null}
-                        </>
-                      ) : item.type === "recent-view" ? (
-                        <>
-                          <Clock size={16} aria-hidden="true" />
-                          <span className="command-palette__item-title">
-                            {item.recentView.title}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <Search size={15} aria-hidden="true" />
-                          <span className="command-palette__item-title">
-                            {item.recentSearch.displayQuery}
-                          </span>
-                        </>
-                      )}
-                    </button>
-                    {item.type === "recent-search" ? (
-                      <button
-                        type="button"
-                        className="command-palette__item-remove"
-                        aria-label={`${item.recentSearch.displayQuery} 최근 검색어 삭제`}
-                        onClick={() =>
-                          removeRecentSearch(item.recentSearch.normalizedQuery)
-                        }
-                      >
-                        <X size={13} aria-hidden="true" />
-                      </button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            </div>
+                      <ul className="command-palette__recent-search-list">
+                        {recentSearches.map((recentSearch, index) => {
+                          const item: PaletteItem = {
+                            type: "recent-search",
+                            key: `search:${recentSearch.normalizedQuery}`,
+                            recentSearch,
+                          };
+                          return (
+                            <li key={item.key}>
+                              <button
+                                type="button"
+                                className={
+                                  "command-palette__recent-search" +
+                                  (index === highlightedIndex
+                                    ? " command-palette__recent-search--active"
+                                    : "")
+                                }
+                                onMouseEnter={() => setHighlightedIndex(index)}
+                                onClick={() => selectItem(item)}
+                              >
+                                <Clock size={14} aria-hidden="true" />
+                                <span>{recentSearch.displayQuery}</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="command-palette__recent-search-remove"
+                                aria-label={`${recentSearch.displayQuery} 최근 검색어 삭제`}
+                                onClick={() =>
+                                  removeRecentSearch(
+                                    recentSearch.normalizedQuery,
+                                  )
+                                }
+                              >
+                                <X size={12} aria-hidden="true" />
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </section>
+                  ) : null}
 
-            {trimmedQuery ? (
-              <div className="command-palette__footer">
-                <a
-                  href={`/search?q=${encodeURIComponent(trimmedQuery)}`}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    goToSearchPage();
-                  }}
-                >
-                  전체 결과 페이지에서 보기
-                </a>
+                  {trimmedQuery || recentViews.length > 0 ? (
+                    <ul className="command-palette__item-list">
+                      {!trimmedQuery && recentViews.length > 0 ? (
+                        <li className="command-palette__section-header">
+                          <span>최근 문서</span>
+                        </li>
+                      ) : null}
+                      {(trimmedQuery
+                        ? items
+                        : items.slice(recentSearches.length)
+                      ).map((item, index) => {
+                        const itemIndex = trimmedQuery
+                          ? index
+                          : index + recentSearches.length;
+                        return (
+                          <li key={item.key}>
+                            <button
+                              type="button"
+                              className={
+                                "command-palette__item" +
+                                (itemIndex === highlightedIndex
+                                  ? " command-palette__item--active"
+                                  : "")
+                              }
+                              onMouseEnter={() =>
+                                setHighlightedIndex(itemIndex)
+                              }
+                              onClick={() => selectItem(item)}
+                            >
+                              {item.type === "result" ? (
+                                <>
+                                  <FileText size={16} aria-hidden="true" />
+                                  <span className="command-palette__item-title">
+                                    {item.result.title}
+                                  </span>
+                                  {item.result.matchedAlias ? (
+                                    <span className="command-palette__item-meta">
+                                      별칭: {item.result.matchedAlias}
+                                    </span>
+                                  ) : null}
+                                  {item.result.matchedContext ? (
+                                    <SearchResultContext
+                                      className="command-palette__match-context"
+                                      context={item.result.matchedContext}
+                                      query={trimmedQuery}
+                                    />
+                                  ) : null}
+                                </>
+                              ) : item.type === "recent-view" ? (
+                                <>
+                                  <Clock size={16} aria-hidden="true" />
+                                  <span className="command-palette__item-title">
+                                    {item.recentView.title}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <Search size={15} aria-hidden="true" />
+                                  <span className="command-palette__item-title">
+                                    {item.recentSearch.displayQuery}
+                                  </span>
+                                </>
+                              )}
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : null}
+                </div>
+
+                {trimmedQuery ? (
+                  <div className="command-palette__footer">
+                    <a
+                      href={`/search?q=${encodeURIComponent(trimmedQuery)}`}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        goToSearchPage();
+                      }}
+                    >
+                      전체 결과 페이지에서 보기
+                    </a>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }
