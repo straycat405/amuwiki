@@ -14,7 +14,10 @@ import {
   updateImportJobStatus,
 } from "@/features/imports/data";
 import { parseImportFile } from "@/features/imports/parse";
-import { frontmatterAliases } from "@/lib/markdown/frontmatter";
+import {
+  frontmatterAliases,
+  frontmatterUnknownFields,
+} from "@/lib/markdown/frontmatter";
 import type { ImportCommitResult, ImportResultItem } from "@/features/imports/types";
 import { requireApiUser } from "@/lib/auth/api-auth";
 import { slugifyDocumentTitle } from "@/lib/markdown/slug";
@@ -77,6 +80,7 @@ export async function POST(
     const raw = await fileData.text();
     const { title, content, data } = parseImportFile(item.relativePath, raw);
     const aliases = frontmatterAliases(data);
+    const frontmatter = frontmatterUnknownFields(data);
 
     let attemptTitle = title;
     let outcome: Awaited<ReturnType<typeof createDocument>> | null = null;
@@ -86,7 +90,7 @@ export async function POST(
         title: attemptTitle,
         summary: "",
         bodyMarkdown: content,
-      });
+      }, frontmatter);
       attempts += 1;
       if (outcome.ok || outcome.reason !== "duplicate" || conflictPolicy !== "rename") {
         break;

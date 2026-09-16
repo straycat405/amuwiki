@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { createDocument } from "@/features/documents/data";
 import {
   frontmatterAliases,
   frontmatterTitle,
+  frontmatterUnknownFields,
   parseFrontmatter,
 } from "@/lib/markdown/frontmatter";
 import {
@@ -68,6 +70,67 @@ describe("frontmatterTitle / frontmatterAliases", () => {
     ]);
     expect(frontmatterAliases({ aliases: "civ6" })).toEqual(["civ6"]);
     expect(frontmatterAliases({})).toEqual([]);
+  });
+});
+
+describe("frontmatterUnknownFields", () => {
+  it("removes known title and aliases while preserving other YAML values without mutation", () => {
+    const { data } = parseFrontmatter(`---
+title: 문명 6
+aliases:
+  - civ6
+  - 문명6
+published: true
+tags:
+  - strategy
+  - 4x
+metadata:
+  rating: 5
+  platforms:
+    - PC
+---
+내용`);
+
+    expect(frontmatterUnknownFields(data)).toEqual({
+      published: true,
+      tags: ["strategy", "4x"],
+      metadata: { rating: 5, platforms: ["PC"] },
+    });
+    expect(data).toEqual({
+      title: "문명 6",
+      aliases: ["civ6", "문명6"],
+      published: true,
+      tags: ["strategy", "4x"],
+      metadata: { rating: 5, platforms: ["PC"] },
+    });
+  });
+
+  it("returns an empty object for a file with no frontmatter", () => {
+    const { data } = parseImportFile("메모.md", "그냥 내용");
+
+    expect(frontmatterUnknownFields(data)).toEqual({});
+  });
+});
+
+describe("createDocument", () => {
+  it("forwards preserved frontmatter to the create_document RPC", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: "document-1", error: null });
+    const frontmatter = frontmatterUnknownFields({
+      title: "문명 6",
+      aliases: ["civ6"],
+      tags: ["strategy"],
+      metadata: { rating: 5 },
+    });
+
+    await createDocument({ rpc } as never, {
+      title: "문명 6",
+      summary: "",
+      bodyMarkdown: "내용",
+    }, frontmatter);
+
+    expect(rpc).toHaveBeenCalledWith("create_document", expect.objectContaining({
+      p_frontmatter: frontmatter,
+    }));
   });
 });
 

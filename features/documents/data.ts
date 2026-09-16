@@ -267,6 +267,7 @@ export async function listNormalizedTitleSet(
 export async function createDocument(
   supabase: SupabaseClient,
   input: DocumentInput,
+  frontmatter: Record<string, unknown> = {},
 ): Promise<DocumentWriteResult> {
   const slug = slugifyDocumentTitle(input.title);
   if (!slug) return { ok: false, reason: "unknown" };
@@ -277,7 +278,7 @@ export async function createDocument(
     p_slug: slug,
     p_summary: input.summary,
     p_body_markdown: input.bodyMarkdown,
-    p_frontmatter: {},
+    p_frontmatter: frontmatter,
     p_link_targets: linkTargetsForStorage(input.bodyMarkdown),
   });
 
