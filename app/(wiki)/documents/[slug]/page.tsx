@@ -57,6 +57,12 @@ export default async function DocumentPage({
         <header className="document-view__header">
           <div>
             <h1>{document.title}</h1>
+            <time className="document-view__updated-at" dateTime={document.updated_at}>
+              마지막 수정{" "}
+              {new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium" }).format(
+                new Date(document.updated_at),
+              )}
+            </time>
             {document.summary ? <p>{document.summary}</p> : null}
           </div>
           <div className="document-view__actions">

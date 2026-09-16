@@ -520,6 +520,13 @@ button {
   letter-spacing: -0.03em;
 }
 
+.document-view__updated-at {
+  display: block;
+  margin-top: var(--space-3);
+  color: var(--color-muted);
+  font: 500 0.84rem/1.4 var(--font-ui);
+}
+
 .document-view__header p {
   margin: var(--space-3) 0 0;
   color: var(--color-muted);
