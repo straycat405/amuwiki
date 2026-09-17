@@ -87,6 +87,12 @@ export type ExportableAttachment = Attachment & {
   sha256: string;
 };
 
+// PostgREST puts an `in.(...)` filter straight into the request URL, so passing every
+// document id at once can exceed the gateway's URL length limit once an account has a
+// couple hundred documents (measured: 251 ids -> "URI too long"). Chunking keeps each
+// request's filter well under that limit regardless of how many ids are passed in.
+const DOCUMENT_ID_CHUNK_SIZE = 150;
+
 /** Every non-deleted attachment belonging to the given documents — used to build a full export. */
 export async function listAttachmentsForDocuments(
   supabase: SupabaseClient,
@@ -94,15 +100,30 @@ export async function listAttachmentsForDocuments(
   documentIds: string[],
 ): Promise<ExportableAttachment[]> {
   if (documentIds.length === 0) return [];
-  const { data, error } = await supabase
-    .from("attachments")
-    .select("id, document_id, storage_path, original_name, mime_type, size_bytes, sha256")
-    .eq("owner_id", ownerId)
-    .in("document_id", documentIds)
-    .is("deleted_at", null);
-  if (error) throw new Error("내보낼 첨부파일을 불러오지 못했습니다.");
 
-  return (data ?? []).map((row) => ({
+  const chunks: string[][] = [];
+  for (let start = 0; start < documentIds.length; start += DOCUMENT_ID_CHUNK_SIZE) {
+    chunks.push(documentIds.slice(start, start + DOCUMENT_ID_CHUNK_SIZE));
+  }
+
+  const results = await Promise.all(
+    chunks.map((chunk) =>
+      supabase
+        .from("attachments")
+        .select("id, document_id, storage_path, original_name, mime_type, size_bytes, sha256")
+        .eq("owner_id", ownerId)
+        .in("document_id", chunk)
+        .is("deleted_at", null),
+    ),
+  );
+
+  const rows: NonNullable<(typeof results)[number]["data"]> = [];
+  for (const { data, error } of results) {
+    if (error) throw new Error("내보낼 첨부파일을 불러오지 못했습니다.");
+    if (data) rows.push(...data);
+  }
+
+  return rows.map((row) => ({
     id: row.id,
     documentId: row.document_id,
     storagePath: row.storage_path,

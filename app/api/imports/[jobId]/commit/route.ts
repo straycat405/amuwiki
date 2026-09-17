@@ -3,6 +3,13 @@ import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 
+// Commit loops through every analyzed item to create a document and reindex
+// links, so a large batch can exceed the platform default (10s on Vercel
+// Hobby). 60s is the max duration Hobby allows.
+export const maxDuration = 60;
+// Colocate with the Supabase project (Seoul) to cut per-item round-trip latency.
+export const preferredRegion = "icn1";
+
 import { findAttachmentByStoragePath, insertAttachment } from "@/features/attachments/data";
 import {
   addDocumentAlias,
@@ -72,19 +79,65 @@ export async function POST(
   let failed = 0;
   let attached = 0;
 
+  // Both this map and the document-body prefetch below hit Storage a couple hundred times for a
+  // large batch; running that one `await` at a time is what blows past the function time limit,
+  // so both loops fetch in bounded-concurrency batches instead.
+  const DOWNLOAD_CONCURRENCY = 16;
+
   // Attachment bytes are re-downloaded once up front so phase 2 can look them up per document
   // without re-fetching Storage on every reference; size is already bounded by the analyze-time
   // ZIP limits, so holding this batch in memory is the same trade-off the analyze step already made.
   const attachmentBytesByPath = new Map<string, Buffer>();
-  for (const item of items) {
-    if (item.itemKind !== "attachment" || item.status !== "ready") continue;
-    const { data: fileData } = await supabase.storage
-      .from(IMPORTS_BUCKET)
-      .download(`${job.storagePath}/${storageKeyFor(item.relativePath)}`);
-    if (!fileData) continue;
-    attachmentBytesByPath.set(item.relativePath, Buffer.from(await fileData.arrayBuffer()));
+  const attachmentItems = items.filter((item) => item.itemKind === "attachment" && item.status === "ready");
+  for (let start = 0; start < attachmentItems.length; start += DOWNLOAD_CONCURRENCY) {
+    const batch = attachmentItems.slice(start, start + DOWNLOAD_CONCURRENCY);
+    const results = await Promise.all(
+      batch.map((item) =>
+        supabase.storage
+          .from(IMPORTS_BUCKET)
+          .download(`${job.storagePath}/${storageKeyFor(item.relativePath)}`),
+      ),
+    );
+    await Promise.all(
+      results.map(async ({ data: fileData }, offset) => {
+        const item = batch[offset];
+        if (!fileData || !item) return;
+        attachmentBytesByPath.set(item.relativePath, Buffer.from(await fileData.arrayBuffer()));
+      }),
+    );
   }
   const usedAttachmentPaths = new Set<string>();
+
+  // Retrying a commit that partially timed out re-lists every item, but anything already
+  // resolved ("imported"/"skipped") from that earlier attempt shouldn't pay for another
+  // Storage download + create attempt — every retry would re-walk the same already-done
+  // prefix before reaching new work, wasting most of the time budget on no-ops.
+  const alreadyResolved = new Set<string>(["imported", "skipped"]);
+
+  // Document bodies are downloaded once up front, concurrently: phase 1 below must stay a
+  // sequential loop (each create/dedupe/rename decision depends on what the batch has already
+  // created), but the Storage round trip that feeds it doesn't.
+  const documentItems = items.filter(
+    (item) => item.itemKind === "document" && item.status !== "failed" && !alreadyResolved.has(item.status),
+  );
+  const rawByItemId = new Map<string, string | null>();
+  for (let start = 0; start < documentItems.length; start += DOWNLOAD_CONCURRENCY) {
+    const batch = documentItems.slice(start, start + DOWNLOAD_CONCURRENCY);
+    const results = await Promise.all(
+      batch.map((item) =>
+        supabase.storage
+          .from(IMPORTS_BUCKET)
+          .download(`${job.storagePath}/${storageKeyFor(item.relativePath)}`),
+      ),
+    );
+    await Promise.all(
+      results.map(async ({ data: fileData, error }, offset) => {
+        const item = batch[offset];
+        if (!item) return;
+        rawByItemId.set(item.id, error || !fileData ? null : await fileData.text());
+      }),
+    );
+  }
 
   // Phase 1: create every ready document with its original (un-relinked) body.
   const created: CreatedDocument[] = [];
@@ -95,18 +148,23 @@ export async function POST(
       resultItems.push({ relativePath: item.relativePath, title: item.detectedTitle, status: "failed" });
       continue;
     }
+    if (alreadyResolved.has(item.status)) {
+      // Already imported or skipped in an earlier attempt at this same job — count it
+      // toward the totals this response reports, but don't touch Storage or the DB again.
+      if (item.status === "imported") imported += 1;
+      else skipped += 1;
+      resultItems.push({ relativePath: item.relativePath, title: item.detectedTitle, status: item.status });
+      continue;
+    }
 
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from(IMPORTS_BUCKET)
-      .download(`${job.storagePath}/${storageKeyFor(item.relativePath)}`);
-    if (downloadError || !fileData) {
+    const raw = rawByItemId.get(item.id);
+    if (raw === null || raw === undefined) {
       failed += 1;
       await updateImportItem(supabase, item.id, { status: "failed" });
       resultItems.push({ relativePath: item.relativePath, title: item.detectedTitle, status: "failed" });
       continue;
     }
 
-    const raw = await fileData.text();
     const { title, content, data } = parseImportFile(item.relativePath, raw);
     const aliases = frontmatterAliases(data);
     const frontmatter = frontmatterUnknownFields(data);

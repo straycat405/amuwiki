@@ -16,6 +16,7 @@ import {
 import { AskInCard } from "@/components/document/ask-in-card";
 import { MarkdownRenderer } from "@/components/document/markdown-renderer";
 import { usePreferences } from "@/components/preferences/preferences-provider";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { WikiLinkResolutions } from "@/lib/markdown/wiki-links";
 
 type PreviewDocument = {
@@ -30,8 +31,14 @@ type CardPosition = { x: number; y: number };
 type PreviewCard = PreviewDocument & {
   id: string;
   position: CardPosition;
+  /** Placeholder card shown immediately while `fetchPreview` is still in flight. */
+  loading: boolean;
 };
 type TrailItem = { slug: string; title: string };
+
+function loadingCard(id: string, slug: string, position: CardPosition): PreviewCard {
+  return { id, slug, position, loading: true, title: "", summary: "", bodyMarkdown: "", wikiLinkResolutions: {} };
+}
 
 type WikiLinkExplorerProps = {
   markdown: string;
@@ -141,9 +148,14 @@ export function WikiLinkExplorer({
 
   const showPreview = useCallback(
     async (slug: string, position: CardPosition) => {
+      setHoveredCard(loadingCard(`hover:${slug}`, slug, position));
       const preview = await fetchPreview(slug);
-      if (!preview || hoveredSlug.current !== slug) return;
-      setHoveredCard({ ...preview, id: `hover:${preview.slug}`, position });
+      if (hoveredSlug.current !== slug) return;
+      if (!preview) {
+        setHoveredCard(null);
+        return;
+      }
+      setHoveredCard({ ...preview, id: `hover:${preview.slug}`, position, loading: false });
     },
     [fetchPreview],
   );
@@ -192,32 +204,45 @@ export function WikiLinkExplorer({
         }
       }
 
-      const preview = await fetchPreview(slug);
-      if (!preview) return;
-      if (pinnedCards.some((card) => card.slug === preview.slug)) return;
+      const id = `pin:${slug}`;
 
       // 카드가 이미 3개 열려 있으면 가장 먼저 열었던 카드를 닫는 대신
-      // 탐색 경로로 접어 사용자가 다시 열어볼 수 있게 남긴다.
+      // 탐색 경로로 접어 사용자가 다시 열어볼 수 있게 남긴다. 이 결정은
+      // (로딩 스켈레톤을 바로 보여주기 위해) preview fetch를 기다리지 않고
+      // 클릭 시점의 카드 수만으로 즉시 내린다 — 안내 문구의 제목만 fetch 이후로 미룬다.
       const oldest = pinnedCards.length >= MAX_PINNED_CARDS ? pinnedCards[0] : undefined;
       if (oldest) {
         setTrail((current) => [
-          ...current.filter(
-            (item) => item.slug !== oldest.slug && item.slug !== preview.slug,
-          ),
+          ...current.filter((item) => item.slug !== oldest.slug && item.slug !== slug),
           { slug: oldest.slug, title: oldest.title },
         ]);
-        setNotice(`'${oldest.title}'를 탐색 경로로 접고 '${preview.title}'를 열었습니다.`);
       } else {
-        setTrail((current) => current.filter((item) => item.slug !== preview.slug));
-        setNotice("");
+        setTrail((current) => current.filter((item) => item.slug !== slug));
       }
 
-      pendingFocusId.current = `pin:${preview.slug}`;
+      pendingFocusId.current = id;
       setPinnedCards((cards) => {
-        if (cards.some((card) => card.slug === preview.slug)) return cards;
+        if (cards.some((card) => card.slug === slug)) return cards;
         const next = cards.length >= MAX_PINNED_CARDS ? cards.slice(1) : cards;
-        return [...next, { ...preview, id: `pin:${preview.slug}`, position }];
+        return [...next, loadingCard(id, slug, position)];
       });
+
+      const preview = await fetchPreview(slug);
+      if (!preview) {
+        setPinnedCards((cards) => cards.filter((card) => card.id !== id));
+        setNotice("");
+        return;
+      }
+      setNotice(
+        oldest ? `'${oldest.title}'를 탐색 경로로 접고 '${preview.title}'를 열었습니다.` : "",
+      );
+      setPinnedCards((cards) =>
+        cards.map((card) =>
+          card.id === id
+            ? { ...preview, id: `pin:${preview.slug}`, position: card.position, loading: false }
+            : card,
+        ),
+      );
     },
     [fetchPreview, pinnedCards],
   );
@@ -429,7 +454,11 @@ function PreviewCardView({
 
   return (
     <section
-      aria-label={`${card.title} ${kind === "pinned" ? "고정 카드" : "미리보기"}`}
+      aria-label={
+        card.loading
+          ? "불러오는 중"
+          : `${card.title} ${kind === "pinned" ? "고정 카드" : "미리보기"}`
+      }
       aria-modal={kind === "pinned" ? false : undefined}
       className={`preview-card preview-card--${kind}`}
       onKeyDown={
@@ -469,14 +498,14 @@ function PreviewCardView({
           <Pin size={15} aria-hidden="true" />
         )}
         <Link
-          aria-label={`${card.title} 문서로 이동 (카드 닫힘)`}
+          aria-label={card.loading ? "불러오는 중" : `${card.title} 문서로 이동 (카드 닫힘)`}
           href={`/documents/${card.slug}`}
           title="이 문서로 이동합니다(카드가 닫힙니다)"
         >
-          {card.title}
+          {card.loading ? <Skeleton className="skeleton--line-lg" width="70%" /> : card.title}
         </Link>
         <Link
-          aria-label={`${card.title} 새 탭에서 열기`}
+          aria-label={card.loading ? "불러오는 중, 새 탭에서 열기" : `${card.title} 새 탭에서 열기`}
           className="preview-card__open"
           href={`/documents/${card.slug}`}
           rel="noopener noreferrer"
@@ -491,14 +520,24 @@ function PreviewCardView({
           </button>
         ) : null}
       </header>
-      {card.summary ? <p className="preview-card__summary">{card.summary}</p> : null}
-      <div className="preview-card__body">
-        <MarkdownRenderer
-          markdown={card.bodyMarkdown}
-          wikiLinkResolutions={card.wikiLinkResolutions}
-        />
-      </div>
-      {ask}
+      {card.loading ? (
+        <div className="preview-card__skeleton-body">
+          <Skeleton className="skeleton--line" width="95%" />
+          <Skeleton className="skeleton--line" width="88%" />
+          <Skeleton className="skeleton--line" width="60%" />
+        </div>
+      ) : (
+        <>
+          {card.summary ? <p className="preview-card__summary">{card.summary}</p> : null}
+          <div className="preview-card__body">
+            <MarkdownRenderer
+              markdown={card.bodyMarkdown}
+              wikiLinkResolutions={card.wikiLinkResolutions}
+            />
+          </div>
+        </>
+      )}
+      {card.loading ? null : ask}
     </section>
   );
 }

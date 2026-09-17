@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
-import { type LoginState, requestLoginLink } from "./actions";
+import { type LoginState, loginWithPassword } from "./actions";
 
 const initialState: LoginState = { status: "idle" };
 
@@ -12,13 +12,13 @@ function SubmitButton() {
 
   return (
     <button className="primary-button login-submit" disabled={pending} type="submit">
-      {pending ? "보내는 중" : "로그인 링크 받기"}
+      {pending ? "확인 중" : "로그인"}
     </button>
   );
 }
 
 export function LoginForm() {
-  const [state, action] = useActionState(requestLoginLink, initialState);
+  const [state, action] = useActionState(loginWithPassword, initialState);
 
   return (
     <form className="login-form" action={action}>
@@ -30,6 +30,14 @@ export function LoginForm() {
         placeholder="name@example.com"
         required
         type="email"
+      />
+      <label htmlFor="password">비밀번호</label>
+      <input
+        autoComplete="current-password"
+        id="password"
+        name="password"
+        required
+        type="password"
       />
       <SubmitButton />
       {state.message ? (

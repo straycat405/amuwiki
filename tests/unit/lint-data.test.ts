@@ -62,17 +62,20 @@ describe("reindexAllDocuments", () => {
     });
   });
 
-  it("stops and throws when a reindex call fails", async () => {
+  it("throws if any reindex call in the batch fails, after attempting the whole batch", async () => {
+    // Calls run concurrently within a batch (not one `await` at a time — see reindexAllDocuments),
+    // so every document in a batch is attempted even if another one in the same batch errors.
     const rpc = vi
       .fn()
       .mockResolvedValueOnce({ data: null, error: null })
-      .mockResolvedValueOnce({ data: null, error: { code: "P0002" } });
+      .mockResolvedValueOnce({ data: null, error: { code: "P0002" } })
+      .mockResolvedValueOnce({ data: null, error: null });
     const { client } = fakeSupabase(
       [{ data: [{ id: "d1", body_markdown: "" }, { id: "d2", body_markdown: "" }, { id: "d3", body_markdown: "" }], error: null }],
       rpc,
     );
     await expect(reindexAllDocuments(client, "owner")).rejects.toThrow();
-    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc).toHaveBeenCalledTimes(3);
   });
 });
 
