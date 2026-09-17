@@ -25,6 +25,7 @@ import {
   IMPORT_MAX_FILES,
   IMPORT_MAX_FILE_BYTES,
   IMPORT_SAMPLE_LIMIT,
+  IMPORT_ZIP_MAX_DOCUMENTS,
   IMPORT_ZIP_MAX_TOTAL_BYTES,
   type ImportAnalysis,
   type ImportItemStatus,
@@ -43,7 +44,7 @@ type CandidateFile = {
 };
 
 const ZIP_ERROR_MESSAGES: Record<string, string> = {
-  zip_too_large: "ZIP 파일이 250MB를 넘을 수 없습니다.",
+  zip_too_large: "ZIP 파일이 50MB를 넘을 수 없습니다.",
   too_many_entries: "ZIP 안의 파일이 5,000개를 넘을 수 없습니다.",
   zip_bomb_suspected: "ZIP을 풀었을 때 예상 용량이 너무 큽니다.",
 };
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: "ZIP 파일만 올릴 수 있습니다." }, { status: 400 });
     }
     if (zipFile.size > IMPORT_ZIP_MAX_TOTAL_BYTES) {
-      return NextResponse.json({ message: "ZIP 파일이 250MB를 넘을 수 없습니다." }, { status: 400 });
+      return NextResponse.json({ message: "ZIP 파일이 50MB를 넘을 수 없습니다." }, { status: 400 });
     }
     sourceKind = sourceKindField === "obsidian-vault" ? "obsidian-vault" : "markdown-zip";
 
@@ -106,6 +107,15 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(await zipFile.arrayBuffer());
       const result = await extractZipEntries(buffer);
       ignoredCount = result.ignoredCount + result.rejectedCount;
+      const documentEntryCount = result.entries.filter((entry) => entry.kind === "document").length;
+      if (documentEntryCount > IMPORT_ZIP_MAX_DOCUMENTS) {
+        return NextResponse.json(
+          {
+            message: `ZIP 안의 문서가 한 번에 최대 ${IMPORT_ZIP_MAX_DOCUMENTS}개까지 가능합니다 (현재 ${documentEntryCount}개). 여러 ZIP으로 나눠서 가져와주세요.`,
+          },
+          { status: 400 },
+        );
+      }
       candidates = result.entries.map((entry) => ({
         relativePath: entry.relativePath,
         kind: entry.kind,

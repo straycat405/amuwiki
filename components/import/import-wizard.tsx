@@ -1,14 +1,12 @@
 "use client";
 
-import { AlertTriangle, FileArchive, FileUp, Upload } from "lucide-react";
+import { AlertTriangle, FileArchive, FileUp, Loader2, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { MarkdownRenderer } from "@/components/document/markdown-renderer";
-import type {
-  ImportAnalysis,
-  ImportCommitResult,
-} from "@/features/imports/types";
+import { useImportProgress } from "@/components/import/import-progress-provider";
+import type { ImportAnalysis } from "@/features/imports/types";
 
 type Phase = "select" | "analyzing" | "review" | "committing" | "done";
 type UploadMode = "files" | "zip";
@@ -22,6 +20,7 @@ const WARNING_LABELS: Record<string, string> = {
 };
 
 export function ImportWizard() {
+  const importProgress = useImportProgress();
   const [phase, setPhase] = useState<Phase>("select");
   const [uploadMode, setUploadMode] = useState<UploadMode>("files");
   const [files, setFiles] = useState<File[]>([]);
@@ -29,10 +28,23 @@ export function ImportWizard() {
   const [isObsidianVault, setIsObsidianVault] = useState(false);
   const [analysis, setAnalysis] = useState<ImportAnalysis | null>(null);
   const [conflictPolicy, setConflictPolicy] = useState<"skip" | "rename">("skip");
-  const [result, setResult] = useState<ImportCommitResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const zipInputRef = useRef<HTMLInputElement>(null);
+
+  // The provider drives the actual commit fetch(es) so progress stays visible even
+  // if this page unmounts. Derive the effective phase from it (instead of syncing
+  // via an effect) whenever it's tracking the job this wizard started.
+  const trackingThisJob = importProgress.state.jobId !== null && importProgress.state.jobId === analysis?.jobId;
+  const effectivePhase: Phase =
+    trackingThisJob && importProgress.state.phase === "committing"
+      ? "committing"
+      : trackingThisJob && importProgress.state.phase === "done"
+        ? "done"
+        : trackingThisJob && importProgress.state.phase === "error"
+          ? "review"
+          : phase;
+  const commitError = trackingThisJob && importProgress.state.phase === "error" ? importProgress.state.message : error;
 
   const analyze = async () => {
     if (uploadMode === "files" && files.length === 0) return;
@@ -64,42 +76,54 @@ export function ImportWizard() {
     }
   };
 
-  const commit = async () => {
+  const commit = () => {
     if (!analysis) return;
     setError(null);
     setPhase("committing");
-    try {
-      const response = await fetch(`/api/imports/${analysis.jobId}/commit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conflictPolicy }),
-      });
-      const payload = (await response.json()) as ImportCommitResult & {
-        message?: string;
-      };
-      if (!response.ok) {
-        setError(payload.message ?? "가져오기에 실패했습니다.");
-        setPhase("review");
-        return;
-      }
-      setResult(payload);
-      setPhase("done");
-    } catch {
-      setError("가져오기에 실패했습니다.");
-      setPhase("review");
-    }
+    importProgress.startCommit(analysis.jobId, conflictPolicy);
   };
 
   const reset = () => {
+    importProgress.dismiss();
     setPhase("select");
     setFiles([]);
     setZipFile(null);
     setAnalysis(null);
-    setResult(null);
     setError(null);
   };
 
-  if (phase === "done" && result) {
+  const result = importProgress.state.jobId === analysis?.jobId ? importProgress.state.result : null;
+
+  if (effectivePhase === "committing") {
+    const { counts, total, attempt } = importProgress.state;
+    const resolved = counts ? counts.imported + counts.skipped + counts.failed : 0;
+    const percent = total > 0 ? Math.round((resolved / total) * 100) : 0;
+    return (
+      <div className="import-wizard">
+        <h2>가져오는 중</h2>
+        <p className="import-wizard__summary">
+          <Loader2 size={14} className="import-status-bar__spinner" aria-hidden="true" style={{ marginRight: 6, verticalAlign: "-2px" }} />
+          {total > 0 ? `${resolved}/${total}건 처리됨 (${percent}%)` : "시작하는 중..."}
+        </p>
+        {total > 0 ? (
+          <div className="import-status-bar__track">
+            <div className="import-status-bar__fill" style={{ width: `${percent}%` }} />
+          </div>
+        ) : null}
+        {attempt > 1 ? (
+          <p className="import-wizard__summary">
+            연결이 끊겨 자동으로 이어서 진행 중입니다 ({attempt}번째 시도) — 이 화면을 벗어나도 계속 진행되며, 하단 상태 표시줄에서 진행률을 볼 수 있습니다.
+          </p>
+        ) : (
+          <p className="import-wizard__summary">
+            이 화면을 벗어나도 계속 진행되며, 하단 상태 표시줄에서 진행률을 볼 수 있습니다.
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  if (effectivePhase === "done" && result) {
     return (
       <div className="import-wizard">
         <h2>가져오기 완료</h2>
@@ -133,7 +157,7 @@ export function ImportWizard() {
     );
   }
 
-  if (phase === "review" && analysis) {
+  if (effectivePhase === "review" && analysis) {
     return (
       <div className="import-wizard">
         <h2>가져오기 미리보기</h2>
@@ -212,7 +236,7 @@ export function ImportWizard() {
           </div>
         </div>
 
-        {error ? <p className="settings-status settings-status--error">{error}</p> : null}
+        {commitError ? <p className="settings-status settings-status--error">{commitError}</p> : null}
 
         <div className="import-wizard__actions">
           <button className="secondary-button" type="button" onClick={reset}>
@@ -221,7 +245,7 @@ export function ImportWizard() {
           <button
             className="primary-button"
             type="button"
-            disabled={phase !== "review" || analysis.readyCount === 0}
+            disabled={effectivePhase !== "review" || analysis.readyCount === 0}
             onClick={commit}
           >
             <Upload size={16} aria-hidden="true" />
@@ -295,7 +319,7 @@ export function ImportWizard() {
             disabled={phase === "analyzing"}
           >
             <FileArchive size={28} aria-hidden="true" />
-            <span>{zipFile ? zipFile.name : "클릭해서 .zip 파일 선택 (최대 250MB)"}</span>
+            <span>{zipFile ? zipFile.name : "클릭해서 .zip 파일 선택 (최대 50MB, 문서 150개)"}</span>
           </button>
           <label className="settings-option">
             <input

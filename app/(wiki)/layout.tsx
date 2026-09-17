@@ -4,6 +4,8 @@ import { AppHeader } from "@/components/shell/app-header";
 import { SidebarProvider } from "@/components/shell/sidebar-provider";
 import { SiteFooter } from "@/components/shell/site-footer";
 import { WikiSidebar } from "@/components/shell/wiki-sidebar";
+import { ImportProgressProvider } from "@/components/import/import-progress-provider";
+import { ImportStatusBar } from "@/components/import/import-status-bar";
 import { PreferencesProvider } from "@/components/preferences/preferences-provider";
 import { listRecentViewsPage } from "@/features/history/data";
 import { getPreferences } from "@/features/preferences/data";
@@ -26,15 +28,18 @@ export default async function WikiLayout({
 
   return (
     <PreferencesProvider initial={preferences}>
-      <SidebarProvider>
-        <AppHeader />
-        <WikiSidebar
-          recentViews={recentViewsPage.views}
-          initialHasMore={recentViewsPage.hasMore}
-        />
-        {children}
-        <SiteFooter />
-      </SidebarProvider>
+      <ImportProgressProvider>
+        <SidebarProvider>
+          <AppHeader />
+          <WikiSidebar
+            recentViews={recentViewsPage.views}
+            initialHasMore={recentViewsPage.hasMore}
+          />
+          {children}
+          <SiteFooter />
+        </SidebarProvider>
+        <ImportStatusBar />
+      </ImportProgressProvider>
     </PreferencesProvider>
   );
 }
