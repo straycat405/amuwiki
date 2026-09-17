@@ -2,6 +2,15 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { NextResponse, type NextRequest } from "next/server";
 
+// A ZIP import loops through every entry to upload it to Storage and insert an
+// import_items row, so this can take longer than the platform's default limit
+// (10s on Vercel Hobby) once Supabase network latency adds up. 60s is the max
+// duration Hobby allows for a serverless function.
+export const maxDuration = 60;
+// Colocate the function with the Supabase project (Seoul) so each of those
+// per-entry round trips isn't paying cross-region latency on top of the count.
+export const preferredRegion = "icn1";
+
 import { listNormalizedTitleSet } from "@/features/documents/data";
 import {
   IMPORTS_BUCKET,
@@ -151,7 +160,9 @@ export async function POST(request: NextRequest) {
   let conflictWithExistingCount = 0;
   let attachmentCount = 0;
 
-  for (const candidate of candidates) {
+  // Parsing/hashing/dedup is CPU-only and must stay in candidate order (seenInBatch
+  // depends on it), so it runs as a plain sequential pass first.
+  const prepared = candidates.map((candidate) => {
     const sha256 = createHash("sha256").update(candidate.bytes).digest("hex");
     const warningCodes: string[] = [];
 
@@ -174,13 +185,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { error: uploadError } = await supabase.storage
-      .from(IMPORTS_BUCKET)
-      .upload(`${storagePath}/${storageKeyFor(candidate.relativePath)}`, candidate.bytes, {
-        contentType: candidate.mimeType,
-        upsert: true,
-      });
-    if (uploadError) {
+    return { candidate, sha256, warningCodes, detectedTitle, parsedContent };
+  });
+
+  // The Storage upload is the slow, I/O-bound part — a couple hundred of these run
+  // serially can blow past the platform's function time limit. Uploading is safe to
+  // parallelize (each writes an independent object), so run it in bounded-concurrency
+  // batches instead of one `await` per candidate.
+  const UPLOAD_CONCURRENCY = 16;
+  const uploadResults: { error: boolean }[] = new Array(prepared.length);
+  for (let start = 0; start < prepared.length; start += UPLOAD_CONCURRENCY) {
+    const batch = prepared.slice(start, start + UPLOAD_CONCURRENCY);
+    const batchResults = await Promise.all(
+      batch.map(({ candidate }) =>
+        supabase.storage
+          .from(IMPORTS_BUCKET)
+          .upload(`${storagePath}/${storageKeyFor(candidate.relativePath)}`, candidate.bytes, {
+            contentType: candidate.mimeType,
+            upsert: true,
+          }),
+      ),
+    );
+    batchResults.forEach((result, offset) => {
+      uploadResults[start + offset] = { error: Boolean(result.error) };
+    });
+  }
+
+  prepared.forEach(({ candidate, sha256, warningCodes, detectedTitle, parsedContent }, index) => {
+    if (uploadResults[index]?.error) {
       failedCount += 1;
       itemsToInsert.push({
         relativePath: candidate.relativePath,
@@ -190,7 +222,7 @@ export async function POST(request: NextRequest) {
         status: "failed",
         warningCodes: [...warningCodes, "upload_failed"],
       });
-      continue;
+      return;
     }
 
     readyCount += 1;
@@ -206,7 +238,7 @@ export async function POST(request: NextRequest) {
     if (parsedContent !== null && samples.length < IMPORT_SAMPLE_LIMIT) {
       samples.push({ relativePath: candidate.relativePath, title: detectedTitle, bodyMarkdown: parsedContent });
     }
-  }
+  });
 
   const insertedItems = await insertImportItems(supabase, job.id, itemsToInsert);
   const items = itemsToInsert.map((item, index) => ({

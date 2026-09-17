@@ -45,14 +45,24 @@ export async function reindexAllDocuments(
     .is("deleted_at", null);
   if (error) throw new Error("문서를 불러오지 못했습니다.");
 
-  for (const row of data ?? []) {
-    const { error: rpcError } = await supabase.rpc("reindex_document_links", {
-      p_document_id: row.id,
-      p_link_targets: linkTargetsForStorage(row.body_markdown),
-    });
-    if (rpcError) throw new Error("링크를 다시 색인하지 못했습니다.");
+  // Each RPC call only touches rows scoped to its own document_id, so a large owner
+  // (or a large import batch that triggers this) doesn't have to pay for hundreds of
+  // sequential round trips — reindex in bounded-concurrency batches instead.
+  const REINDEX_CONCURRENCY = 16;
+  const rows = data ?? [];
+  for (let start = 0; start < rows.length; start += REINDEX_CONCURRENCY) {
+    const batch = rows.slice(start, start + REINDEX_CONCURRENCY);
+    const results = await Promise.all(
+      batch.map((row) =>
+        supabase.rpc("reindex_document_links", {
+          p_document_id: row.id,
+          p_link_targets: linkTargetsForStorage(row.body_markdown),
+        }),
+      ),
+    );
+    if (results.some((result) => result.error)) throw new Error("링크를 다시 색인하지 못했습니다.");
   }
-  return (data ?? []).length;
+  return rows.length;
 }
 
 export async function listPendingSuggestions(
