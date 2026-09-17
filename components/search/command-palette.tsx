@@ -22,11 +22,13 @@ import {
   searchAction,
 } from "@/app/(wiki)/search/actions";
 import { SearchResultContext } from "@/components/search/search-result-context";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { RecentView } from "@/features/history/types";
 import { DEFAULT_SEARCH_LIMIT } from "@/features/search/types";
 import type { RecentSearch, SearchResult } from "@/features/search/types";
 
 const DEBOUNCE_MS = 150;
+const LOADING_ROW_WIDTHS = ["62%", "48%", "70%"];
 
 // 플랫폼은 세션 중 바뀌지 않으므로 구독할 대상이 없다 — 서버에서는 Ctrl
 // 표기로 렌더링하고, 클라이언트에서만 실제 OS로 바꿔 읽는다(effect의
@@ -265,9 +267,21 @@ export function CommandPalette() {
 
                 <div className="command-palette__results">
                   {trimmedQuery && isSearching ? (
-                    <p className="command-palette__loading" role="status">
-                      검색 중…
-                    </p>
+                    <>
+                      <span className="visually-hidden" role="status">
+                        검색 중…
+                      </span>
+                      <ul className="command-palette__item-list" aria-hidden="true">
+                        {LOADING_ROW_WIDTHS.map((width, index) => (
+                          <li key={index}>
+                            <div className="command-palette__item command-palette__item--skeleton">
+                              <Skeleton height={16} width={16} />
+                              <Skeleton className="command-palette__item-title" height={14} width={width} />
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
                   ) : null}
 
                   {trimmedQuery && !isSearching && items.length === 0 ? (
