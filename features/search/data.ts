@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { normalizeConcept } from "@/lib/markdown/slug";
+import { DEFAULT_SEARCH_LIMIT } from "@/features/search/types";
 import type { RecentSearch, SearchResult } from "@/features/search/types";
 
 type SearchDocumentsRow = {
@@ -16,7 +17,7 @@ type SearchDocumentsRow = {
 export async function searchDocuments(
   supabase: SupabaseClient,
   query: string,
-  limit = 20,
+  limit = DEFAULT_SEARCH_LIMIT,
 ): Promise<SearchResult[]> {
   const normalized = normalizeConcept(query);
   if (!normalized) return [];

@@ -9,6 +9,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type KeyboardEvent,
 } from "react";
 import { createPortal } from "react-dom";
@@ -22,9 +23,26 @@ import {
 } from "@/app/(wiki)/search/actions";
 import { SearchResultContext } from "@/components/search/search-result-context";
 import type { RecentView } from "@/features/history/types";
+import { DEFAULT_SEARCH_LIMIT } from "@/features/search/types";
 import type { RecentSearch, SearchResult } from "@/features/search/types";
 
 const DEBOUNCE_MS = 150;
+
+// 플랫폼은 세션 중 바뀌지 않으므로 구독할 대상이 없다 — 서버에서는 Ctrl
+// 표기로 렌더링하고, 클라이언트에서만 실제 OS로 바꿔 읽는다(effect의
+// setState 없이 useSyncExternalStore로 안전하게 처리).
+function subscribeToNothing() {
+  return () => {};
+}
+function getIsMacSnapshot() {
+  const platform =
+    (navigator as { userAgentData?: { platform?: string } }).userAgentData
+      ?.platform ?? navigator.platform;
+  return /mac/i.test(platform);
+}
+function getIsMacServerSnapshot() {
+  return false;
+}
 
 type PaletteItem =
   | { type: "result"; key: string; result: SearchResult }
@@ -42,6 +60,11 @@ export function CommandPalette() {
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [recentViews, setRecentViews] = useState<RecentView[]>([]);
   const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const isMac = useSyncExternalStore(
+    subscribeToNothing,
+    getIsMacSnapshot,
+    getIsMacServerSnapshot,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceTimer = useRef<number | null>(null);
   const requestId = useRef(0);
@@ -208,7 +231,7 @@ export function CommandPalette() {
       >
         <Search size={17} aria-hidden="true" />
         <span>검색</span>
-        <kbd>⌘ K</kbd>
+        <kbd>{isMac ? "⌘ K" : "Ctrl K"}</kbd>
       </button>
 
       {open
@@ -387,6 +410,11 @@ export function CommandPalette() {
 
                 {trimmedQuery ? (
                   <div className="command-palette__footer">
+                    {!isSearching && results.length >= DEFAULT_SEARCH_LIMIT ? (
+                      <span className="command-palette__limit-note">
+                        상위 {DEFAULT_SEARCH_LIMIT}개까지 표시 — 검색어를 구체화해 보세요
+                      </span>
+                    ) : null}
                     <a
                       href={`/search?q=${encodeURIComponent(trimmedQuery)}`}
                       onClick={(event) => {

@@ -1,3 +1,5 @@
+export const DEFAULT_SEARCH_LIMIT = 20;
+
 export type SearchResult = {
   documentId: string;
   slug: string;

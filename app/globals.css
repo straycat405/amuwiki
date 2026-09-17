@@ -482,6 +482,12 @@ button {
   letter-spacing: -0.045em;
 }
 
+.document-index__header-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-3);
+}
+
 .document-list {
   display: grid;
   gap: var(--space-2);
@@ -2067,11 +2073,22 @@ button {
   }
 
   .document-editor__toolbar {
-    grid-template-columns: 1fr auto auto auto auto;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: var(--space-2);
+    column-gap: var(--space-3);
+  }
+
+  /* 저장 상태(서버 저장됨/이 기기에만 임시 저장됨)는 좁은 화면에서도 숨기지
+     않는다 — 제목·버튼 줄 아래 한 줄을 온전히 차지해 항상 읽힌다. */
+  .document-editor__status-group {
+    order: 1;
+    flex: 1 1 100%;
   }
 
   .document-editor__status {
-    display: none;
+    white-space: normal;
   }
 }
 
@@ -2319,8 +2336,18 @@ button {
 }
 
 .command-palette__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
   border-top: 1px solid var(--color-border);
   padding: var(--space-3) var(--space-5);
+}
+
+.command-palette__limit-note {
+  color: var(--color-muted);
+  font: 450 0.82rem/1.4 var(--font-ui);
 }
 
 .command-palette__footer a {

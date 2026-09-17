@@ -105,6 +105,10 @@ export function WikiLinkExplorer({
   const hoverTimer = useRef<number | null>(null);
   const closeTimer = useRef<number | null>(null);
   const requestCache = useRef(new Map<string, Promise<PreviewDocument | null>>());
+  // 카드를 연 Wiki link(키보드 포커스를 되돌려줄 대상)와, 열린 카드의 DOM 엘리먼트.
+  const triggerRefs = useRef(new Map<string, HTMLElement>());
+  const cardRefs = useRef(new Map<string, HTMLElement>());
+  const pendingFocusId = useRef<string | null>(null);
   const dragState = useRef<{
     id: string;
     offsetX: number;
@@ -169,6 +173,7 @@ export function WikiLinkExplorer({
     async (slug: string, position: CardPosition) => {
       const existing = pinnedCards.find((card) => card.slug === slug);
       if (existing) {
+        pendingFocusId.current = existing.id;
         setPinnedCards((cards) => [
           ...cards.filter((card) => card.slug !== slug),
           existing,
@@ -207,6 +212,7 @@ export function WikiLinkExplorer({
         setNotice("");
       }
 
+      pendingFocusId.current = `pin:${preview.slug}`;
       setPinnedCards((cards) => {
         if (cards.some((card) => card.slug === preview.slug)) return cards;
         const next = cards.length >= MAX_PINNED_CARDS ? cards.slice(1) : cards;
@@ -215,6 +221,23 @@ export function WikiLinkExplorer({
     },
     [fetchPreview, pinnedCards],
   );
+
+  // 카드가 (재)열릴 때 카드 컨테이너로 포커스를 옮겨, 키보드/스크린리더 사용자가
+  // 카드가 열렸음을 바로 인식하고 안에서 탐색을 시작할 수 있게 한다.
+  useEffect(() => {
+    const id = pendingFocusId.current;
+    if (!id) return;
+    pendingFocusId.current = null;
+    cardRefs.current.get(id)?.focus();
+  }, [pinnedCards]);
+
+  const closePinnedCard = useCallback((id: string) => {
+    setPinnedCards((cards) => cards.filter((item) => item.id !== id));
+    const trigger = triggerRefs.current.get(id);
+    triggerRefs.current.delete(id);
+    cardRefs.current.delete(id);
+    trigger?.focus();
+  }, []);
 
   const reopenFromTrail = useCallback(
     (item: TrailItem) => {
@@ -243,6 +266,11 @@ export function WikiLinkExplorer({
     const slug = linkSlug(event.target);
     if (!slug || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
+    const linkEl =
+      event.target instanceof Element
+        ? event.target.closest<HTMLAnchorElement>("a.concept-link")
+        : null;
+    if (linkEl) triggerRefs.current.set(`pin:${slug}`, linkEl);
     const position = cardPosition(event.clientX, event.clientY);
     hoveredSlug.current = slug;
     void pinPreview(slug, position);
@@ -343,7 +371,11 @@ export function WikiLinkExplorer({
           card={card}
           key={card.id}
           kind="pinned"
-          onClose={() => setPinnedCards((cards) => cards.filter((item) => item.id !== card.id))}
+          onClose={() => closePinnedCard(card.id)}
+          registerElement={(element) => {
+            if (element) cardRefs.current.set(card.id, element);
+            else cardRefs.current.delete(card.id);
+          }}
           onDragEnd={stopDrag}
           onDragMove={dragCard}
           onDragStart={(event) => startDrag(event, card)}
@@ -369,6 +401,7 @@ function PreviewCardView({
   onEnter,
   onLeave,
   onPositionChange,
+  registerElement,
 }: {
   ask?: ReactNode;
   card: PreviewCard;
@@ -380,6 +413,7 @@ function PreviewCardView({
   onEnter?: () => void;
   onLeave?: () => void;
   onPositionChange?: (position: CardPosition) => void;
+  registerElement?: (element: HTMLElement | null) => void;
 }) {
   const cardRef = useRef<HTMLElement>(null);
 
@@ -396,11 +430,27 @@ function PreviewCardView({
   return (
     <section
       aria-label={`${card.title} ${kind === "pinned" ? "고정 카드" : "미리보기"}`}
+      aria-modal={kind === "pinned" ? false : undefined}
       className={`preview-card preview-card--${kind}`}
+      onKeyDown={
+        kind === "pinned"
+          ? (event) => {
+              if (event.key === "Escape") {
+                event.stopPropagation();
+                onClose?.();
+              }
+            }
+          : undefined
+      }
       onPointerEnter={onEnter}
       onPointerLeave={onLeave}
-      ref={cardRef}
+      ref={(element) => {
+        cardRef.current = element;
+        registerElement?.(element);
+      }}
+      role={kind === "pinned" ? "dialog" : undefined}
       style={{ left: card.position.x, top: card.position.y }}
+      tabIndex={kind === "pinned" ? -1 : undefined}
     >
       <header className="preview-card__header">
         {kind === "pinned" ? (

@@ -14,6 +14,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "검색" };
 
+const SEARCH_PAGE_LIMIT = 30;
+
 export default async function SearchPage({
   searchParams,
 }: PageProps<"/search">) {
@@ -26,7 +28,9 @@ export default async function SearchPage({
   const supabase = await createClient();
 
   const [results, recentSearches, recentViews] = await Promise.all([
-    trimmedQuery ? searchDocuments(supabase, trimmedQuery, 30) : Promise.resolve([]),
+    trimmedQuery
+      ? searchDocuments(supabase, trimmedQuery, SEARCH_PAGE_LIMIT)
+      : Promise.resolve([]),
     trimmedQuery ? Promise.resolve([]) : listRecentSearches(supabase, user.id),
     trimmedQuery ? Promise.resolve([]) : listRecentViews(supabase, user.id),
   ]);
@@ -60,6 +64,9 @@ export default async function SearchPage({
           <>
             <p className="search-view__summary">
               &quot;{trimmedQuery}&quot; 검색 결과 {results.length}건
+              {results.length >= SEARCH_PAGE_LIMIT
+                ? ` (상위 ${SEARCH_PAGE_LIMIT}개까지 표시, 검색어를 구체화하면 더 정확합니다)`
+                : ""}
             </p>
             {results.length === 0 ? (
               <p className="search-view__empty">검색 결과가 없습니다.</p>

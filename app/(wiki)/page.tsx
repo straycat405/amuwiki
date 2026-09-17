@@ -51,9 +51,15 @@ export default async function HomePage() {
         >
           <div className="document-index__header">
             <h1 id="document-index-title">문서</h1>
-            <Link className="primary-button" href="/documents/new">
-              <Plus size={17} aria-hidden="true" />새 문서
-            </Link>
+            <div className="document-index__header-actions">
+              <Link className="secondary-button" href="/settings/import">
+                <Upload size={17} aria-hidden="true" />
+                가져오기
+              </Link>
+              <Link className="primary-button" href="/documents/new">
+                <Plus size={17} aria-hidden="true" />새 문서
+              </Link>
+            </div>
           </div>
           <ul className="document-list">
             {documents.map((document) => (
