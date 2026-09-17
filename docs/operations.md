@@ -69,13 +69,17 @@ npx supabase db reset
 
 ## 배포
 
-배포 대상, 도메인, 백업 제공자와 배치 작업 실행 방식은 아직 결정되지 않았다. 선택 전까지 특정 호스팅의 설정을 프로젝트 표준으로 기록하지 않는다. 후보를 비교할 때는 MVP 비용과 관리 난이도, Next.js 실행 호환성, Supabase와의 지역 지연, ZIP 가져오기·내보내기·정리 작업의 실행 시간, 사용자 증가 시 확장, 논리 백업과 복구 절차를 함께 평가한다.
+2026-09-17에 Personal MVP 배포 대상을 Vercel(무료 Hobby 플랜)과 Supabase(서울 리전, 무료 티어)로 정했다. 백업 제공자와 정기 배치 작업 실행 방식은 아직 결정되지 않았다 — 이 둘은 후속 범위로 남는다.
 
-Supabase 배포는 Dashboard에서 SQL을 붙여넣는 대신 연결된 프로젝트에 마이그레이션 이력을 적용한다.
+`main` 브랜치는 Vercel의 Git 연동으로 GitHub 리포(`straycat405/amuwiki`)에 연결되어 있다. `main`에 push하면 Vercel이 자동으로 프로덕션에 배포한다(다른 브랜치는 프리뷰 배포). 별도 GitHub Actions 워크플로는 없다 — [ci-cd-deployment-proposal.md](tracking/ci-cd-deployment-proposal.md)의 GitHub Actions 중심 제안은 검토했지만 Vercel의 기본 Git 연동으로 같은 효과(커밋 기반 자동 배포, 브랜치별 프리뷰)를 얻을 수 있어 별도로 채택하지 않았다.
+
+Supabase 마이그레이션은 애플리케이션 배포와 별개로, 연결된 프로젝트에 직접 적용한다(Vercel push에 자동으로 묶여 있지 않음 — 스키마를 바꾼 뒤에는 반드시 이 명령을 따로 실행한다):
 
 ```bash
 npx supabase link --project-ref <project-ref>
 npx supabase db push
 ```
 
-실제 서비스 배포 절차가 정해지면 애플리케이션 배포, 환경값 등록, 데이터베이스 적용, 스모크 검사, 롤백과 백업 복구 순서를 하나의 반복 가능한 절차로 확정해야 한다.
+애플리케이션 서버리스 함수는 Supabase와 같은 리전(`icn1`, 서울)을 쓰도록 개별 라우트에서 `preferredRegion`을 지정해야 한다. Vercel Hobby 플랜의 함수 실행시간 기본 제한(10초, 최대 60초)을 넘길 가능성이 있는 라우트(대량 ZIP 가져오기 등 여러 항목을 반복 처리하는 API)는 `maxDuration = 60`을 명시하고, 항목별 Storage 요청은 순차 `await` 대신 병렬 배치로 처리해야 한다 — 239개 문서짜리 ZIP 가져오기가 이 제한에 실제로 걸렸다(`app/api/imports/route.ts`, `app/api/imports/[jobId]/commit/route.ts` 참고). 그래도 60초를 넘는 배치는 커밋 API가 이미 처리된 항목(`imported`/`skipped`)을 건너뛰도록 되어 있어, 같은 요청을 다시 보내면 이어서 진행된다 — 다만 이건 재시도로 시간제한을 우회하는 것일 뿐 근본 해결은 아니다. 진짜 해결(비동기 작업 큐)은 후속 범위로 남는다.
+
+실제 서비스 배포 절차(스모크 검사, 롤백, 백업 복구 순서를 하나의 반복 가능한 절차로 확정하는 것)는 아직 정해지지 않았다.
