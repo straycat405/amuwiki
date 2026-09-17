@@ -16,6 +16,7 @@ import {
 import { AskInCard } from "@/components/document/ask-in-card";
 import { MarkdownRenderer } from "@/components/document/markdown-renderer";
 import { usePreferences } from "@/components/preferences/preferences-provider";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { WikiLinkResolutions } from "@/lib/markdown/wiki-links";
 
 type PreviewDocument = {
@@ -30,7 +31,13 @@ type CardPosition = { x: number; y: number };
 type PreviewCard = PreviewDocument & {
   id: string;
   position: CardPosition;
+  /** Placeholder card shown immediately while `fetchPreview` is still in flight. */
+  loading: boolean;
 };
+
+function loadingCard(id: string, slug: string, position: CardPosition): PreviewCard {
+  return { id, slug, position, loading: true, title: "", summary: "", bodyMarkdown: "", wikiLinkResolutions: {} };
+}
 
 type WikiLinkExplorerProps = {
   markdown: string;
@@ -132,9 +139,14 @@ export function WikiLinkExplorer({
 
   const showPreview = useCallback(
     async (slug: string, position: CardPosition) => {
+      setHoveredCard(loadingCard(`hover:${slug}`, slug, position));
       const preview = await fetchPreview(slug);
-      if (!preview || hoveredSlug.current !== slug) return;
-      setHoveredCard({ ...preview, id: `hover:${preview.slug}`, position });
+      if (hoveredSlug.current !== slug) return;
+      if (!preview) {
+        setHoveredCard(null);
+        return;
+      }
+      setHoveredCard({ ...preview, id: `hover:${preview.slug}`, position, loading: false });
     },
     [fetchPreview],
   );
@@ -174,20 +186,27 @@ export function WikiLinkExplorer({
         setNotice(`고정 카드는 최대 ${MAX_PINNED_CARDS}개까지 열 수 있습니다.`);
         return;
       }
-      const preview = await fetchPreview(slug);
-      if (!preview) return;
+      const id = `pin:${slug}`;
       setPinnedCards((cards) => {
-        if (cards.some((card) => card.slug === preview.slug)) return cards;
+        if (cards.some((card) => card.slug === slug)) return cards;
         if (cards.length >= MAX_PINNED_CARDS) {
           setNotice(`고정 카드는 최대 ${MAX_PINNED_CARDS}개까지 열 수 있습니다.`);
           return cards;
         }
-        return [
-          ...cards,
-          { ...preview, id: `pin:${preview.slug}`, position },
-        ];
+        return [...cards, loadingCard(id, slug, position)];
       });
       setNotice("");
+
+      const preview = await fetchPreview(slug);
+      if (!preview) {
+        setPinnedCards((cards) => cards.filter((card) => card.id !== id));
+        return;
+      }
+      setPinnedCards((cards) =>
+        cards.map((card) =>
+          card.id === id ? { ...preview, id: `pin:${preview.slug}`, position: card.position, loading: false } : card,
+        ),
+      );
     },
     [fetchPreview, pinnedCards],
   );
@@ -331,7 +350,11 @@ function PreviewCardView({
 
   return (
     <section
-      aria-label={`${card.title} ${kind === "pinned" ? "고정 카드" : "미리보기"}`}
+      aria-label={
+        card.loading
+          ? "불러오는 중"
+          : `${card.title} ${kind === "pinned" ? "고정 카드" : "미리보기"}`
+      }
       className={`preview-card preview-card--${kind}`}
       onPointerEnter={onEnter}
       onPointerLeave={onLeave}
@@ -354,7 +377,9 @@ function PreviewCardView({
         ) : (
           <Pin size={15} aria-hidden="true" />
         )}
-        <Link href={`/documents/${card.slug}`}>{card.title}</Link>
+        <Link href={`/documents/${card.slug}`}>
+          {card.loading ? <Skeleton className="skeleton--line-lg" width="70%" /> : card.title}
+        </Link>
         <Link
           aria-label="해당 문서로 이동"
           className="preview-card__open"
@@ -371,14 +396,24 @@ function PreviewCardView({
           </button>
         ) : null}
       </header>
-      {card.summary ? <p className="preview-card__summary">{card.summary}</p> : null}
-      <div className="preview-card__body">
-        <MarkdownRenderer
-          markdown={card.bodyMarkdown}
-          wikiLinkResolutions={card.wikiLinkResolutions}
-        />
-      </div>
-      {ask}
+      {card.loading ? (
+        <div className="preview-card__skeleton-body">
+          <Skeleton className="skeleton--line" width="95%" />
+          <Skeleton className="skeleton--line" width="88%" />
+          <Skeleton className="skeleton--line" width="60%" />
+        </div>
+      ) : (
+        <>
+          {card.summary ? <p className="preview-card__summary">{card.summary}</p> : null}
+          <div className="preview-card__body">
+            <MarkdownRenderer
+              markdown={card.bodyMarkdown}
+              wikiLinkResolutions={card.wikiLinkResolutions}
+            />
+          </div>
+        </>
+      )}
+      {card.loading ? null : ask}
     </section>
   );
 }
